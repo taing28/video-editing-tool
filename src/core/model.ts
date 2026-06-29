@@ -131,8 +131,16 @@ export interface TextEffect extends BaseEffect {
   align: 'left' | 'center' | 'right';
 }
 
+export interface CaptionEffect extends BaseEffect {
+  type: 'caption';
+  text: string;
+  fontSize: number;
+  fontFamily: string;
+  color: string;
+}
+
 /** Union of all effect variants. Extend this as new effect types are added. */
-export type Effect = TextEffect;
+export type Effect = TextEffect | CaptionEffect;
 
 // ---------------------------------------------------------------------------
 // Tracks & Project

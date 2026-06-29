@@ -310,6 +310,66 @@
   padding: 2px;
 }
 
+/* ---- overlays list ---- */
+.overlays {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.overlays__item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.overlays__select {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.overlays__select:hover {
+  border-color: var(--accent);
+}
+.overlays__type {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(91, 140, 255, 0.12);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.overlays__text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--muted);
+  font-size: 12px;
+}
+.overlays__delete {
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 4px;
+}
+.overlays__delete:hover {
+  color: #ff6b6b;
+}
+
 /* ---- timeline ---- */
 .timeline {
   background: var(--panel);

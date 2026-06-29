@@ -138,26 +138,50 @@ export function Preview() {
             <Rect x={0} y={0} width={scene.width} height={scene.height} fill={scene.background} />
             {scene.layers.map((layer) => {
               if (layer === selImage || layer === selText) return null;
-              return layer.kind === 'image' ? (
-                <KonvaImage
-                  key={layer.clipId}
-                  image={layer.drawable as CanvasImageSource as HTMLImageElement}
-                  x={layer.x}
-                  y={layer.y}
-                  width={layer.width}
-                  height={layer.height}
-                  opacity={layer.opacity}
-                />
-              ) : (
+              if (layer.kind === 'image') {
+                return (
+                  <KonvaImage
+                    key={layer.clipId}
+                    image={layer.drawable as CanvasImageSource as HTMLImageElement}
+                    x={layer.x}
+                    y={layer.y}
+                    width={layer.width}
+                    height={layer.height}
+                    opacity={layer.opacity}
+                  />
+                );
+              }
+              if (layer.kind === 'text') {
+                return (
+                  <KonvaText
+                    key={layer.effectId}
+                    text={layer.text}
+                    x={layer.x}
+                    y={layer.y}
+                    fontSize={layer.fontSize}
+                    fontFamily={layer.fontFamily}
+                    fontStyle={weightToFontStyle(layer.fontWeight)}
+                    fill={layer.color}
+                  />
+                );
+              }
+              // caption — centered, bottom-anchored, outlined
+              return (
                 <KonvaText
                   key={layer.effectId}
-                  text={layer.text}
-                  x={layer.x}
-                  y={layer.y}
+                  text={layer.lines.join('\n')}
+                  x={0}
+                  width={scene.width}
+                  align="center"
+                  lineHeight={1.2}
+                  y={scene.height - layer.lines.length * layer.fontSize * 1.2 - layer.fontSize}
                   fontSize={layer.fontSize}
                   fontFamily={layer.fontFamily}
-                  fontStyle={weightToFontStyle(layer.fontWeight)}
+                  fontStyle="700"
                   fill={layer.color}
+                  stroke="rgba(0,0,0,0.85)"
+                  strokeWidth={Math.max(2, layer.fontSize * 0.12)}
+                  fillAfterStrokeEnabled
                 />
               );
             })}

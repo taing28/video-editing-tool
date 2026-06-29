@@ -14,7 +14,7 @@ npm run verify     # typecheck + unit tests + browser e2e + export test (full ga
 npm run build      # typecheck + production build
 ```
 
-## What works today (Phases 0–8)
+## What works today (Phases 0–9)
 
 - Import images / audio / **video** (Import button, or drop files on the sidebar).
 - Drag a media card onto a track (or double-click to add).
@@ -41,8 +41,9 @@ npm run build      # typecheck + production build
 - Scrub the ruler; Play/Pause advances the playhead — **with audible audio playback** and
   **live video frames** in the preview.
 - **Video clips** decode and render frame-accurately (preview seeks; export seeks per frame).
-- Add a **text overlay** with editable text / size / weight / color / duration, positioned
-  by dragging (proves the extensible effect model).
+- Add a **text overlay** (drag-positioned) or a **caption** (centered, bottom-anchored,
+  outlined subtitle) with editable text / size / color / timing. An **Overlays list** in the
+  inspector re-selects any text/caption.
 - **Export to a real video file** — an **export dialog** picks resolution (Full/75%/50%),
   quality (High/Medium/Low), and format (Auto/MP4/WebM); **Cancel** mid-export. H.264 MP4
   (falls back to VP9/VP8 WebM), with all audio tracks mixed down via `OfflineAudioContext`.
@@ -50,8 +51,8 @@ npm run build      # typecheck + production build
   refresh, so you don't lose work.
 - Undo/redo, keyboard shortcuts (Space, ⌘/Ctrl+Z, Delete, S to split).
 
-**Not yet wired:** moving render+encode into a Web Worker for very long projects;
-lower-thirds / more overlay types; other transition styles (wipe, slide).
+**Not yet wired:** auto-transcription (Whisper) to fill the caption track; speed control;
+lower-thirds / more overlay types; other transition styles; Web-Worker render.
 
 ## Testing
 
@@ -113,7 +114,9 @@ src/
 - ~~**Phase 7 — UI & media management**~~ ✅ done: filmstrip thumbnails, per-track mute/hide,
   media delete, editable name + fps, snapping toggle.
 - ~~**Phase 8 — Export controls**~~ ✅ done: resolution/quality/format dialog + cancel.
-- **Phase 9 — More effects:** captions/subtitles, speed control, lower-thirds, transition styles.
+- ~~**Phase 9 — Captions**~~ ✅ done: caption effect (2nd effect type) + overlays list.
+- **Phase 10 — More effects:** auto-transcription (Whisper) to fill captions, speed control,
+  lower-thirds, transition styles.
 - **Later — Scale:** move render+encode into a Web Worker (note: `OfflineAudioContext` +
   `<video>` seeking are main-thread-only, so this mainly helps pure image+audio projects).
 - Optional: wrap in Electron + mediabunny's server backend for native-speed export.

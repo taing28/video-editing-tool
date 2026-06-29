@@ -239,6 +239,37 @@ try {
   const bg = await page.evaluate(() => window.__editor.getState().project.background);
   assert(bg === '#3366ff', `background color set (${bg})`);
 
+  log('STEP 13b — add + edit a caption');
+  await page.click('button:has-text("CC Caption")');
+  const capId = await page.evaluate(() => window.__editor.getState().selectedEffectId);
+  assert(
+    await page.evaluate(
+      (id) => window.__editor.getState().project.effects[id]?.type === 'caption',
+      capId,
+    ),
+    'caption effect added + selected',
+  );
+  await page.waitForSelector('.inspector textarea');
+  await page.fill('.inspector textarea', 'Hello captions');
+  assert(
+    (await page.evaluate((id) => window.__editor.getState().project.effects[id].text, capId)) ===
+      'Hello captions',
+    'caption text edits apply',
+  );
+
+  log('STEP 13c — overlays list re-selects an overlay');
+  await page.evaluate(() => window.__editor.getState().selectClip(null)); // deselect
+  await page.waitForSelector('.overlays__select');
+  assert(
+    (await page.locator('.overlays__select').count()) >= 2,
+    'overlays list shows the text + caption',
+  );
+  await page.locator('.overlays__select').first().click();
+  assert(
+    (await page.evaluate(() => window.__editor.getState().selectedEffectId)) != null,
+    'clicking an overlay selects it',
+  );
+
   log('STEP 14 — cross-dissolve transition between the two video clips');
   await page.locator('.lane--video .clip').nth(1).click(); // select the 2nd (later) clip
   await page.waitForSelector('button:has-text("Cross-dissolve")');

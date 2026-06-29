@@ -6,7 +6,12 @@
  * lets you set an image's on-screen duration. This panel is intentionally thin:
  * when new effect types arrive, each contributes its own editor here.
  */
-import { useEditor, useSelectedClip, useSelectedTextEffect } from '../store/editorStore';
+import {
+  useEditor,
+  useSelectedClip,
+  useSelectedTextEffect,
+  useSelectedCaption,
+} from '../store/editorStore';
 import { framesToSeconds, secondsToFrames } from '../core/time';
 
 function TextEffectEditor() {
@@ -183,6 +188,95 @@ function ClipEditor() {
   );
 }
 
+function CaptionEditor() {
+  const caption = useSelectedCaption();
+  const project = useEditor((s) => s.project);
+  const update = useEditor((s) => s.updateTextEffect);
+  if (!caption) return null;
+  const durationSeconds = framesToSeconds(caption.timing.duration, project.fps);
+  return (
+    <div className="inspector__group">
+      <h3>Caption</h3>
+      <label className="field">
+        <span>Text</span>
+        <textarea
+          rows={2}
+          value={caption.text}
+          onChange={(e) => update(caption.id, { text: e.target.value })}
+        />
+      </label>
+      <label className="field">
+        <span>Font size</span>
+        <input
+          type="number"
+          min={8}
+          value={caption.fontSize}
+          onChange={(e) => update(caption.id, { fontSize: Number(e.target.value) })}
+        />
+      </label>
+      <label className="field">
+        <span>Color</span>
+        <input
+          type="color"
+          value={caption.color}
+          onChange={(e) => update(caption.id, { color: e.target.value })}
+        />
+      </label>
+      <label className="field">
+        <span>Duration (s)</span>
+        <input
+          type="number"
+          min={0.1}
+          step={0.1}
+          value={durationSeconds.toFixed(1)}
+          onChange={(e) =>
+            update(caption.id, {
+              timing: {
+                start: caption.timing.start,
+                duration: Math.max(1, secondsToFrames(Number(e.target.value), project.fps)),
+              },
+            })
+          }
+        />
+      </label>
+      <p className="inspector__hint">
+        Captions appear centered near the bottom with an outline for readability.
+      </p>
+    </div>
+  );
+}
+
+function OverlaysList() {
+  const effects = useEditor((s) => s.project.effects);
+  const selectEffect = useEditor((s) => s.selectEffect);
+  const removeEffect = useEditor((s) => s.removeEffect);
+  const list = Object.values(effects);
+  if (list.length === 0) return null;
+  return (
+    <div className="inspector__group">
+      <h3>Overlays</h3>
+      <ul className="overlays">
+        {list.map((e) => (
+          <li key={e.id} className="overlays__item">
+            <button className="overlays__select" onClick={() => selectEffect(e.id)}>
+              <span className="overlays__type">{e.type === 'caption' ? 'CC' : 'T'}</span>
+              <span className="overlays__text">{e.text || '(empty)'}</span>
+            </button>
+            <button
+              className="overlays__delete"
+              aria-label="Delete overlay"
+              title="Delete overlay"
+              onClick={() => removeEffect(e.id)}
+            >
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function ProjectEditor() {
   const project = useEditor((s) => s.project);
   const setBackground = useEditor((s) => s.setBackground);
@@ -219,11 +313,23 @@ function ProjectEditor() {
 
 export function Inspector() {
   const text = useSelectedTextEffect();
+  const caption = useSelectedCaption();
   const clip = useSelectedClip();
 
   return (
     <aside className="inspector">
-      {text ? <TextEffectEditor /> : clip ? <ClipEditor /> : <ProjectEditor />}
+      {text ? (
+        <TextEffectEditor />
+      ) : caption ? (
+        <CaptionEditor />
+      ) : clip ? (
+        <ClipEditor />
+      ) : (
+        <>
+          <ProjectEditor />
+          <OverlaysList />
+        </>
+      )}
     </aside>
   );
 }

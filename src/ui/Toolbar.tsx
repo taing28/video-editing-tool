@@ -30,6 +30,7 @@ export function Toolbar() {
   const split = useEditor((s) => s.splitSelectedAtPlayhead);
   const remove = useEditor((s) => s.removeSelected);
   const addText = useEditor((s) => s.addTextEffect);
+  const addCaption = useEditor((s) => s.addCaption);
   const hasSelection = useEditor((s) => Boolean(s.selectedClipId || s.selectedEffectId));
 
   const addTrack = useEditor((s) => s.addTrack);
@@ -78,6 +79,9 @@ export function Toolbar() {
         </button>
         <button className="btn" onClick={addText}>
           T Add text
+        </button>
+        <button className="btn" onClick={addCaption}>
+          CC Caption
         </button>
       </div>
 

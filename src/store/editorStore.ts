@@ -9,7 +9,15 @@
  *   counting rAF ticks), so it won't drift.
  */
 import { create } from 'zustand';
-import type { Project, Clip, TextEffect, Track, TrackKind, Transform } from '../core/model';
+import type {
+  Project,
+  Clip,
+  TextEffect,
+  CaptionEffect,
+  Track,
+  TrackKind,
+  Transform,
+} from '../core/model';
 import { createEmptyProject, getTrack } from '../core/model';
 import type { ClipId, EffectId, MediaId, TrackId } from '../core/ids';
 import { newClipId, newEffectId, newTrackId } from '../core/ids';
@@ -108,9 +116,11 @@ export interface EditorState {
   applyTrimStart: (baseline: Project, id: ClipId, startFrame: Frames) => void;
   applyTrimEnd: (baseline: Project, id: ClipId, endFrame: Frames) => void;
 
-  // effects (text first)
+  // effects (text + captions)
   addTextEffect: () => void;
+  addCaption: () => void;
   updateTextEffect: (id: EffectId, patch: Partial<TextEffect>) => void;
+  removeEffect: (id: EffectId) => void;
 
   // transport
   setPlayhead: (frame: Frames) => void;
@@ -328,7 +338,28 @@ export const useEditor = create<EditorState>((set, get) => {
       set({ selectedEffectId: id, selectedClipId: null });
     },
 
+    addCaption: () => {
+      const { project, playhead } = get();
+      const id = newEffectId();
+      const effect: CaptionEffect = {
+        id,
+        type: 'caption',
+        timing: { start: playhead, duration: secondsToFrames(2, project.fps) },
+        text: 'Caption text',
+        fontSize: Math.round(project.height / 20),
+        fontFamily: 'Inter, system-ui, sans-serif',
+        color: '#ffffff',
+      };
+      commit((p) => insertEffect(p, effect));
+      set({ selectedEffectId: id, selectedClipId: null });
+    },
+
     updateTextEffect: (id, patch) => commit((p) => updateEffectEdit(p, id, patch)),
+
+    removeEffect: (id) => {
+      commit((p) => removeEffectEdit(p, id));
+      if (get().selectedEffectId === id) set({ selectedEffectId: null });
+    },
 
     setPlayhead: (frame) => {
       const { project } = get();
@@ -497,5 +528,14 @@ export function useSelectedTextEffect(): TextEffect | null {
     if (!s.selectedEffectId) return null;
     const e = s.project.effects[s.selectedEffectId];
     return e && e.type === 'text' ? e : null;
+  });
+}
+
+/** Selector helper: the currently selected caption (or null). */
+export function useSelectedCaption(): CaptionEffect | null {
+  return useEditor((s) => {
+    if (!s.selectedEffectId) return null;
+    const e = s.project.effects[s.selectedEffectId];
+    return e && e.type === 'caption' ? e : null;
   });
 }

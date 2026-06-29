@@ -58,7 +58,17 @@ export interface TextLayer {
   align: 'left' | 'center' | 'right';
 }
 
-export type SceneLayer = ImageLayer | TextLayer;
+export interface CaptionLayer {
+  kind: 'caption';
+  effectId: string;
+  /** Pre-split lines (on \n); centered + bottom-anchored by the renderer. */
+  lines: string[];
+  fontSize: number;
+  fontFamily: string;
+  color: string;
+}
+
+export type SceneLayer = ImageLayer | TextLayer | CaptionLayer;
 
 export interface Scene {
   width: number;
@@ -106,6 +116,15 @@ export function buildScene(project: Project, frame: Frames, resolve: ResolveMedi
         fontFamily: effect.fontFamily,
         color: effect.color,
         align: effect.align,
+      });
+    } else if (effect.type === 'caption') {
+      layers.push({
+        kind: 'caption',
+        effectId: effect.id,
+        lines: effect.text.split('\n'),
+        fontSize: effect.fontSize,
+        fontFamily: effect.fontFamily,
+        color: effect.color,
       });
     }
   }
