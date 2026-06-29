@@ -1,0 +1,119 @@
+# Video Editor
+
+A browser-based, multi-track video editor — built to learn the engineering and to
+own an extensible text/effects model in code. Stack: **React 19 + TypeScript +
+Vite**, **Konva** for the preview, **mediabunny** (WebCodecs) for export, **Zustand**
+for state, **dnd-kit** for drag/drop. No ffmpeg required.
+
+## Run
+
+```bash
+npm install
+npm run dev        # start the editor at http://localhost:5173
+npm run verify     # typecheck + unit tests + browser e2e + export test (full gate)
+npm run build      # typecheck + production build
+```
+
+## What works today (Phases 0–8)
+
+- Import images / audio / **video** (Import button, or drop files on the sidebar).
+- Drag a media card onto a track (or double-click to add).
+- Move clips, trim either edge, split at the playhead — each gesture is one undo step.
+- **Multiple tracks** — add/remove video & audio tracks (`+ Video` / `+ Audio`); upper
+  video tracks composite on top.
+- **Aspect-ratio / canvas presets** — 16:9, 9:16, 1:1, 4:3 (landscape, vertical, square).
+- **Direct manipulation** — select an image/video/text and **drag to move, drag a corner
+  to resize** right on the preview; opacity slider for media. (Writes the clip's transform;
+  preview and export stay in sync.)
+- **Audio waveforms** drawn on audio clips in the timeline.
+- **Per-clip volume** (audio) and **fade in / fade out** (video opacity + audio gain ramps,
+  applied identically in preview and export).
+- **Background color** for the canvas (letterbox fill for vertical/odd-ratio media).
+- **Cross-dissolve transitions** — overlap two video clips on a track (drag, or the
+  inspector's "Cross-dissolve with previous" button) and the later clip dissolves in.
+- **Snapping** — dragging a clip snaps its edges to other clips' edges, the playhead, and 0
+  (toggle in the timeline toolbar).
+- **Filmstrip thumbnails** on timeline clips (video frames sampled; images tiled) instead of
+  just a name.
+- **Per-track mute / hide** and **delete** controls; **delete media** from the library
+  (removes its clips too, undoable).
+- **Editable project name**, **frame-rate** selector, and the existing canvas/background settings.
+- Scrub the ruler; Play/Pause advances the playhead — **with audible audio playback** and
+  **live video frames** in the preview.
+- **Video clips** decode and render frame-accurately (preview seeks; export seeks per frame).
+- Add a **text overlay** with editable text / size / weight / color / duration, positioned
+  by dragging (proves the extensible effect model).
+- **Export to a real video file** — an **export dialog** picks resolution (Full/75%/50%),
+  quality (High/Medium/Low), and format (Auto/MP4/WebM); **Cancel** mid-export. H.264 MP4
+  (falls back to VP9/VP8 WebM), with all audio tracks mixed down via `OfflineAudioContext`.
+- **Autosave** — the project (and imported media) is saved to IndexedDB and restored on
+  refresh, so you don't lose work.
+- Undo/redo, keyboard shortcuts (Space, ⌘/Ctrl+Z, Delete, S to split).
+
+**Not yet wired:** moving render+encode into a Web Worker for very long projects;
+lower-thirds / more overlay types; other transition styles (wipe, slide).
+
+## Testing
+
+Browser tests run real Chromium (Playwright) and fail on any console error:
+
+```bash
+npm run test         # fast unit tests (time math, edit reducers)
+npm run e2e          # editing flow: import→drag→trim→split→undo→text→scrub→play→track→aspect
+npm run export:test  # exports a clip+audio, re-parses the file, checks tracks+duration
+npm run video:test   # self-bootstraps an MP4, re-imports it as a video clip, preview+re-export
+npm run persist:test # builds a project, reloads, asserts it restored from IndexedDB
+npm run verify       # all of the above + typecheck, the canonical green gate
+```
+
+## Architecture (why it's built to scale)
+
+Two rules carry the design:
+
+1. **Time is integer frames** at the project's fps — never seconds/floats in the
+   document. Conversions happen only at the edges. See [src/core/time.ts](src/core/time.ts).
+2. **The document is pure data; rendering is a pure function of `(project, frame)`.**
+   [`buildScene`](src/render/scene.ts) returns an ordered list of layers that the
+   preview renders today and the export renderer will render tomorrow — so text and
+   future effects appear in the export with zero special-casing.
+
+```
+src/
+  core/
+    time.ts          integer-frame math (+ time.test.ts)
+    ids.ts           branded ids
+    model.ts         Project / Track / Clip / Effect — pure serializable data
+    selectors.ts     "what's visible/audible at frame N" (pure queries)
+    edits.ts         move / trim / split / add / remove reducers (+ edits.test.ts)
+  render/
+    scene.ts         buildScene(project, frame) — the single render-path seam
+    capabilities.ts  WebCodecs export feature-detection
+  media/
+    registry.ts      runtime drawables (kept OUT of the serializable document)
+  store/
+    editorStore.ts   Zustand store: document + selection + playhead + undo/redo + clock
+  ui/
+    Toolbar / MediaLibrary / Preview / Timeline / Inspector / App
+```
+
+## Roadmap
+
+- ~~**Phase 2 — Export**~~ ✅ done: mediabunny `CanvasSource` + a deterministic
+  fake-clock loop feeding the same `buildScene`; audio mixed with `OfflineAudioContext`
+  at 48 kHz; H.264/MP4 with WebM fallback. See [src/render/export.ts](src/render/export.ts).
+- ~~**Phase 3 — Video clips & audio preview**~~ ✅ done: audible Web-Audio playback
+  ([src/playback/audioEngine.ts](src/playback/audioEngine.ts)) + `<video>` decode/seek in
+  preview and frame-accurate export. Also added multi-track + aspect presets (inspired by
+  [OpenCut](https://github.com/opencut-app/opencut)).
+- ~~**Phase 4 — Polish**~~ ✅ mostly done: direct-manipulation transform (move/resize on
+  the preview), opacity, audio waveforms, and autosave/restore (IndexedDB).
+- ~~**Phase 5 — Effects & mixing**~~ ✅ done: per-clip volume, fade in/out (video + audio),
+  background color.
+- ~~**Phase 6 — Transitions & snapping**~~ ✅ done.
+- ~~**Phase 7 — UI & media management**~~ ✅ done: filmstrip thumbnails, per-track mute/hide,
+  media delete, editable name + fps, snapping toggle.
+- ~~**Phase 8 — Export controls**~~ ✅ done: resolution/quality/format dialog + cancel.
+- **Phase 9 — More effects:** captions/subtitles, speed control, lower-thirds, transition styles.
+- **Later — Scale:** move render+encode into a Web Worker (note: `OfflineAudioContext` +
+  `<video>` seeking are main-thread-only, so this mainly helps pure image+audio projects).
+- Optional: wrap in Electron + mediabunny's server backend for native-speed export.

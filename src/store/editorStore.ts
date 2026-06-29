@@ -1,0 +1,501 @@
+/**
+ * store/editorStore — the one place UI reads from and writes through.
+ *
+ * - `project` is the serializable document (the only thing you'd save to disk).
+ * - All structural edits go through `commit()`, which snapshots the previous
+ *   document for undo. Interactive drags use `begin/transient/` so a whole drag
+ *   is ONE undo step, not one per pixel.
+ * - The playback clock derives the frame from real elapsed time (never by
+ *   counting rAF ticks), so it won't drift.
+ */
+import { create } from 'zustand';
+import type { Project, Clip, TextEffect, Track, TrackKind, Transform } from '../core/model';
+import { createEmptyProject, getTrack } from '../core/model';
+import type { ClipId, EffectId, MediaId, TrackId } from '../core/ids';
+import { newClipId, newEffectId, newTrackId } from '../core/ids';
+import type { Frames } from '../core/time';
+import { clampFrame, secondsToFrames } from '../core/time';
+import {
+  addMedia,
+  insertClip,
+  insertEffect,
+  insertTrack as insertTrackEdit,
+  makeClipFromMedia,
+  moveClip as moveClipEdit,
+  removeClip as removeClipEdit,
+  removeEffect as removeEffectEdit,
+  removeMedia as removeMediaEdit,
+  removeTrack as removeTrackEdit,
+  setBackground as setBackgroundEdit,
+  setFps as setFpsEdit,
+  setProjectName as setProjectNameEdit,
+  toggleTrackHidden as toggleTrackHiddenEdit,
+  toggleTrackMuted as toggleTrackMutedEdit,
+  setCanvasSize as setCanvasSizeEdit,
+  setClipDuration as setClipDurationEdit,
+  setClipFade as setClipFadeEdit,
+  setClipGain as setClipGainEdit,
+  splitClip as splitClipEdit,
+  trimClipEnd as trimClipEndEdit,
+  trimClipStart as trimClipStartEdit,
+  updateEffect as updateEffectEdit,
+} from '../core/edits';
+import { computeDuration } from '../core/selectors';
+import { importFile } from '../media/registry';
+import { exportProject, type ExportOptions } from '../render/export';
+import * as audioEngine from '../playback/audioEngine';
+import * as persistence from './persistence';
+
+const HISTORY_LIMIT = 100;
+
+export interface EditorState {
+  project: Project;
+  selectedClipId: ClipId | null;
+  selectedEffectId: EffectId | null;
+  playhead: Frames;
+  isPlaying: boolean;
+  /** Timeline zoom: horizontal pixels per frame. */
+  pxPerFrame: number;
+  past: Project[];
+  future: Project[];
+
+  // export
+  isExporting: boolean;
+  exportProgress: number; // 0..1
+  exportStatus: string | null;
+  exportDialogOpen: boolean;
+  openExportDialog: () => void;
+  closeExportDialog: () => void;
+  exportVideo: (opts?: ExportOptions) => Promise<void>;
+  cancelExport: () => void;
+
+  // selection
+  selectClip: (id: ClipId | null) => void;
+  selectEffect: (id: EffectId | null) => void;
+
+  // tracks + canvas + project settings
+  addTrack: (kind: TrackKind) => void;
+  removeTrack: (trackId: TrackId) => void;
+  toggleTrackMuted: (trackId: TrackId) => void;
+  toggleTrackHidden: (trackId: TrackId) => void;
+  setCanvasSize: (width: number, height: number) => void;
+  renameProject: (name: string) => void;
+  setFps: (fps: number) => void;
+
+  // view
+  snappingEnabled: boolean;
+  toggleSnapping: () => void;
+
+  // media + clips
+  importMedia: (files: File[]) => Promise<void>;
+  removeMedia: (mediaId: MediaId) => void;
+  addClipFromMedia: (mediaId: MediaId, trackId: TrackId) => void;
+  removeSelected: () => void;
+  splitSelectedAtPlayhead: () => void;
+  /** Overlap the selected video clip with the previous one to create a cross-dissolve. */
+  addTransition: () => void;
+  setClipDuration: (id: ClipId, duration: Frames) => void;
+  setClipTransform: (id: ClipId, transform: Transform) => void;
+  setClipGain: (id: ClipId, gain: number) => void;
+  setClipFade: (id: ClipId, patch: { fadeInFrames?: number; fadeOutFrames?: number }) => void;
+  setBackground: (color: string) => void;
+
+  // interactive drag lifecycle (one undo step per gesture)
+  beginInteraction: () => Project;
+  setProjectTransient: (project: Project) => void;
+  // pure-edit helpers re-exposed so components compute from a captured baseline
+  applyMove: (baseline: Project, id: ClipId, startFrame: Frames) => void;
+  applyTrimStart: (baseline: Project, id: ClipId, startFrame: Frames) => void;
+  applyTrimEnd: (baseline: Project, id: ClipId, endFrame: Frames) => void;
+
+  // effects (text first)
+  addTextEffect: () => void;
+  updateTextEffect: (id: EffectId, patch: Partial<TextEffect>) => void;
+
+  // transport
+  setPlayhead: (frame: Frames) => void;
+  play: () => void;
+  pause: () => void;
+  togglePlay: () => void;
+
+  // view + history
+  setZoom: (pxPerFrame: number) => void;
+  undo: () => void;
+  redo: () => void;
+  newProject: () => void;
+  /** Replace the whole document (used by restore-from-storage). */
+  loadProject: (project: Project) => void;
+}
+
+// rAF handle for the playback clock (non-reactive, module-scoped).
+let rafId: number | null = null;
+// True while a burst of renames is being coalesced into one undo entry.
+let renameActive = false;
+// Active export's abort controller (non-reactive, module-scoped).
+let exportAbort: AbortController | null = null;
+
+export const useEditor = create<EditorState>((set, get) => {
+  /** Apply a pure edit and record it as one undo step. */
+  const commit = (fn: (p: Project) => Project) => {
+    renameActive = false; // a structural edit ends any rename-coalescing burst
+    const { project, past } = get();
+    const next = fn(project);
+    if (next === project) return;
+    set({ project: next, past: [...past, project].slice(-HISTORY_LIMIT), future: [] });
+  };
+
+  const stopClock = () => {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+  };
+
+  return {
+    project: createEmptyProject(),
+    selectedClipId: null,
+    selectedEffectId: null,
+    playhead: 0,
+    isPlaying: false,
+    pxPerFrame: 6,
+    snappingEnabled: true,
+    past: [],
+    future: [],
+    isExporting: false,
+    exportProgress: 0,
+    exportStatus: null,
+    exportDialogOpen: false,
+
+    selectClip: (id) => set({ selectedClipId: id, selectedEffectId: null }),
+    selectEffect: (id) => set({ selectedEffectId: id, selectedClipId: null }),
+
+    addTrack: (kind) => {
+      const { project } = get();
+      const count = Object.values(project.tracks).filter((t) => t.kind === kind).length;
+      const track: Track = {
+        id: newTrackId(),
+        kind,
+        name: `${kind === 'video' ? 'Video' : 'Audio'} ${count + 1}`,
+        clipOrder: [],
+        muted: false,
+        hidden: false,
+      };
+      commit((p) => insertTrackEdit(p, track, kind === 'video' ? 'top' : 'bottom'));
+    },
+
+    removeTrack: (trackId) => {
+      commit((p) => removeTrackEdit(p, trackId));
+      set({ selectedClipId: null });
+    },
+
+    toggleTrackMuted: (trackId) => commit((p) => toggleTrackMutedEdit(p, trackId)),
+    toggleTrackHidden: (trackId) => commit((p) => toggleTrackHiddenEdit(p, trackId)),
+    setCanvasSize: (width, height) => commit((p) => setCanvasSizeEdit(p, width, height)),
+    // Rename goes through history, but a typing burst coalesces into ONE undo
+    // entry (so later undos can't silently revert the name).
+    renameProject: (name) => {
+      const { project, past } = get();
+      const next = setProjectNameEdit(project, name);
+      if (next === project) return;
+      if (renameActive) {
+        set({ project: next, future: [] }); // same burst → no new history entry
+      } else {
+        renameActive = true;
+        set({ project: next, past: [...past, project].slice(-HISTORY_LIMIT), future: [] });
+      }
+    },
+    setFps: (fps) => commit((p) => setFpsEdit(p, fps)),
+
+    toggleSnapping: () => set((s) => ({ snappingEnabled: !s.snappingEnabled })),
+
+    importMedia: async (files) => {
+      const fps = get().project.fps;
+      for (const file of files) {
+        try {
+          const asset = await importFile(file, fps);
+          commit((p) => addMedia(p, asset));
+          void persistence.saveMedia(asset.id, file); // persist bytes for reload
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    },
+
+    removeMedia: (mediaId) => {
+      const { selectedClipId, project } = get();
+      const selectionRemoved =
+        selectedClipId != null && project.clips[selectedClipId]?.mediaId === mediaId;
+      // Keep the runtime/IDB blob so undo can bring the clips back this session.
+      commit((p) => removeMediaEdit(p, mediaId));
+      if (selectionRemoved) set({ selectedClipId: null });
+    },
+
+    addClipFromMedia: (mediaId, trackId) => {
+      const { project } = get();
+      const track = getTrack(project, trackId);
+      if (!track) return;
+      // Append after the last clip on the track (no overlaps by default).
+      const trackEnd = track.clipOrder.reduce((max, cid) => {
+        const c = project.clips[cid];
+        return c ? Math.max(max, c.startFrame + c.durationInFrames) : max;
+      }, 0);
+      const id = newClipId();
+      const clip = makeClipFromMedia(project, { id, mediaId, track, startFrame: trackEnd });
+      if (!clip) return;
+      commit((p) => insertClip(p, clip));
+      set({ selectedClipId: id, selectedEffectId: null });
+    },
+
+    removeSelected: () => {
+      const { selectedClipId, selectedEffectId } = get();
+      if (selectedClipId) {
+        commit((p) => removeClipEdit(p, selectedClipId));
+        set({ selectedClipId: null });
+      } else if (selectedEffectId) {
+        commit((p) => removeEffectEdit(p, selectedEffectId));
+        set({ selectedEffectId: null });
+      }
+    },
+
+    splitSelectedAtPlayhead: () => {
+      const { selectedClipId, playhead } = get();
+      if (!selectedClipId) return;
+      commit((p) => splitClipEdit(p, selectedClipId, playhead, newClipId()));
+    },
+
+    addTransition: () => {
+      const { selectedClipId } = get();
+      if (!selectedClipId) return;
+      commit((p) => {
+        const clip = p.clips[selectedClipId];
+        if (!clip || clip.kind === 'audio') return p; // video cross-dissolve only
+        const track = p.tracks[clip.trackId];
+        if (!track) return p;
+        const idx = track.clipOrder.indexOf(selectedClipId);
+        if (idx <= 0) return p; // needs a previous clip on the same track
+        const prev = p.clips[track.clipOrder[idx - 1]];
+        if (!prev) return p;
+        const n = secondsToFrames(0.5, p.fps);
+        const newStart = Math.max(prev.startFrame + 1, prev.startFrame + prev.durationInFrames - n);
+        return moveClipEdit(p, selectedClipId, newStart);
+      });
+    },
+
+    setClipDuration: (id, duration) => commit((p) => setClipDurationEdit(p, id, duration)),
+
+    setClipTransform: (id, transform) =>
+      commit((p) => {
+        const clip = p.clips[id];
+        if (!clip || clip.kind === 'audio') return p;
+        return { ...p, clips: { ...p.clips, [id]: { ...clip, transform } } };
+      }),
+
+    setClipGain: (id, gain) => commit((p) => setClipGainEdit(p, id, gain)),
+    setClipFade: (id, patch) => commit((p) => setClipFadeEdit(p, id, patch)),
+    setBackground: (color) => commit((p) => setBackgroundEdit(p, color)),
+
+    beginInteraction: () => {
+      const { project, past } = get();
+      set({ past: [...past, project].slice(-HISTORY_LIMIT), future: [] });
+      return project;
+    },
+    setProjectTransient: (project) => set({ project }),
+    applyMove: (baseline, id, startFrame) =>
+      set({ project: moveClipEdit(baseline, id, startFrame) }),
+    applyTrimStart: (baseline, id, startFrame) =>
+      set({ project: trimClipStartEdit(baseline, id, startFrame) }),
+    applyTrimEnd: (baseline, id, endFrame) =>
+      set({ project: trimClipEndEdit(baseline, id, endFrame) }),
+
+    addTextEffect: () => {
+      const { project, playhead } = get();
+      const id = newEffectId();
+      const durationInFrames = secondsToFrames(3, project.fps);
+      const effect: TextEffect = {
+        id,
+        type: 'text',
+        timing: { start: playhead, duration: durationInFrames },
+        text: 'Your text',
+        fontSize: Math.round(project.height / 12),
+        fontWeight: 700,
+        fontFamily: 'Inter, system-ui, sans-serif',
+        color: '#ffffff',
+        x: Math.round(project.width * 0.12),
+        y: Math.round(project.height * 0.44),
+        align: 'left',
+      };
+      commit((p) => insertEffect(p, effect));
+      set({ selectedEffectId: id, selectedClipId: null });
+    },
+
+    updateTextEffect: (id, patch) => commit((p) => updateEffectEdit(p, id, patch)),
+
+    setPlayhead: (frame) => {
+      const { project } = get();
+      const max = Math.max(0, computeDuration(project) - 1);
+      set({ playhead: clampFrame(Math.round(frame), 0, Math.max(0, max)) });
+    },
+
+    play: () => {
+      const state = get();
+      if (state.isPlaying) return;
+      const duration = computeDuration(state.project);
+      if (duration <= 0) return;
+      const fps = state.project.fps;
+      // Anchor the clock to wall time so the frame is derived, never counted.
+      const anchorTime = performance.now();
+      const anchorFrame = state.playhead >= duration - 1 ? 0 : state.playhead;
+      set({ isPlaying: true, playhead: anchorFrame });
+
+      const tick = () => {
+        const elapsed = (performance.now() - anchorTime) / 1000;
+        const frame = anchorFrame + secondsToFrames(elapsed, fps);
+        if (frame >= duration - 1) {
+          set({ playhead: Math.max(0, duration - 1), isPlaying: false });
+          audioEngine.stop();
+          stopClock();
+          return;
+        }
+        set({ playhead: frame });
+        rafId = requestAnimationFrame(tick);
+      };
+      rafId = requestAnimationFrame(tick);
+      // Schedule audio (async decode + play); fire-and-forget.
+      void audioEngine.start(state.project, anchorFrame, fps);
+    },
+
+    pause: () => {
+      stopClock();
+      audioEngine.stop();
+      set({ isPlaying: false });
+    },
+
+    togglePlay: () => {
+      if (get().isPlaying) get().pause();
+      else get().play();
+    },
+
+    setZoom: (pxPerFrame) => set({ pxPerFrame: Math.max(0.5, Math.min(40, pxPerFrame)) }),
+
+    openExportDialog: () => set({ exportDialogOpen: true }),
+    closeExportDialog: () => set({ exportDialogOpen: false }),
+    cancelExport: () => exportAbort?.abort(),
+
+    exportVideo: async (opts = {}) => {
+      if (get().isExporting) return;
+      get().pause();
+      const controller = new AbortController();
+      exportAbort = controller;
+      set({
+        isExporting: true,
+        exportProgress: 0,
+        exportStatus: 'Preparing encoder…',
+        exportDialogOpen: false,
+      });
+      try {
+        const result = await exportProject(get().project, {
+          ...opts,
+          signal: controller.signal,
+          onProgress: (f) =>
+            set({ exportProgress: f, exportStatus: `Rendering ${Math.round(f * 100)}%` }),
+        });
+        // Trigger a download of the finished file.
+        const url = URL.createObjectURL(result.blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = result.filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        set({ isExporting: false, exportProgress: 1, exportStatus: null });
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          set({ isExporting: false, exportProgress: 0, exportStatus: null });
+          return;
+        }
+        console.error('Export failed:', err);
+        set({ isExporting: false, exportProgress: 0, exportStatus: null });
+        alert(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
+      } finally {
+        exportAbort = null;
+      }
+    },
+
+    undo: () => {
+      renameActive = false;
+      const { past, project, future } = get();
+      if (past.length === 0) return;
+      const previous = past[past.length - 1];
+      set({
+        project: previous,
+        past: past.slice(0, -1),
+        future: [project, ...future].slice(0, HISTORY_LIMIT),
+        selectedClipId: null,
+        selectedEffectId: null,
+      });
+    },
+
+    redo: () => {
+      renameActive = false;
+      const { past, project, future } = get();
+      if (future.length === 0) return;
+      const next = future[0];
+      set({
+        project: next,
+        past: [...past, project].slice(-HISTORY_LIMIT),
+        future: future.slice(1),
+        selectedClipId: null,
+        selectedEffectId: null,
+      });
+    },
+
+    newProject: () => {
+      stopClock();
+      audioEngine.stop();
+      set({
+        project: createEmptyProject(),
+        selectedClipId: null,
+        selectedEffectId: null,
+        playhead: 0,
+        isPlaying: false,
+        past: [],
+        future: [],
+      });
+    },
+
+    loadProject: (project) => {
+      stopClock();
+      audioEngine.stop();
+      set({
+        project,
+        selectedClipId: null,
+        selectedEffectId: null,
+        playhead: 0,
+        isPlaying: false,
+        past: [],
+        future: [],
+      });
+    },
+  };
+});
+
+// Dev-only test hook so end-to-end tests can read store state. Tree-shaken out
+// of production builds (import.meta.env.DEV is false there).
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as { __editor?: typeof useEditor }).__editor = useEditor;
+}
+
+/** Selector helper: the currently selected clip object (or null). */
+export function useSelectedClip(): Clip | null {
+  return useEditor((s) => (s.selectedClipId ? s.project.clips[s.selectedClipId] ?? null : null));
+}
+
+/** Selector helper: the currently selected text effect (or null). */
+export function useSelectedTextEffect(): TextEffect | null {
+  return useEditor((s) => {
+    if (!s.selectedEffectId) return null;
+    const e = s.project.effects[s.selectedEffectId];
+    return e && e.type === 'text' ? e : null;
+  });
+}
