@@ -53,6 +53,8 @@ import { importFile } from '../media/registry';
 import { exportProject, type ExportOptions } from '../render/export';
 import * as audioEngine from '../playback/audioEngine';
 import * as persistence from './persistence';
+import { transcribe } from '../captions/transcribe';
+import { segmentsToCaptions, mixProjectAudioMono16k } from '../captions/captions';
 
 const HISTORY_LIMIT = 100;
 
@@ -121,6 +123,10 @@ export interface EditorState {
   addCaption: () => void;
   updateTextEffect: (id: EffectId, patch: Partial<TextEffect>) => void;
   removeEffect: (id: EffectId) => void;
+  /** Transcribe the project audio (Whisper) into caption effects. */
+  autoCaption: () => Promise<void>;
+  isTranscribing: boolean;
+  transcribeStatus: string | null;
 
   // transport
   setPlayhead: (frame: Frames) => void;
@@ -175,6 +181,8 @@ export const useEditor = create<EditorState>((set, get) => {
     exportProgress: 0,
     exportStatus: null,
     exportDialogOpen: false,
+    isTranscribing: false,
+    transcribeStatus: null,
 
     selectClip: (id) => set({ selectedClipId: id, selectedEffectId: null }),
     selectEffect: (id) => set({ selectedEffectId: id, selectedClipId: null }),
@@ -359,6 +367,37 @@ export const useEditor = create<EditorState>((set, get) => {
     removeEffect: (id) => {
       commit((p) => removeEffectEdit(p, id));
       if (get().selectedEffectId === id) set({ selectedEffectId: null });
+    },
+
+    autoCaption: async () => {
+      if (get().isTranscribing) return;
+      get().pause();
+      set({ isTranscribing: true, transcribeStatus: 'Preparing audio…' });
+      try {
+        const project = get().project;
+        const pcm = await mixProjectAudioMono16k(project);
+        if (!pcm) {
+          set({ isTranscribing: false, transcribeStatus: null });
+          alert('Add an audio track first — auto-captions transcribe the audio.');
+          return;
+        }
+        const segments = await transcribe(pcm, 16000, (status) => set({ transcribeStatus: status }));
+        const captions = segmentsToCaptions(segments, project.fps, {
+          fontSize: Math.round(project.height / 20),
+          fontFamily: 'Inter, system-ui, sans-serif',
+          color: '#ffffff',
+        });
+        set({ isTranscribing: false, transcribeStatus: null });
+        if (captions.length === 0) {
+          alert('No speech detected in the audio.');
+          return;
+        }
+        commit((p) => captions.reduce((acc, c) => insertEffect(acc, c), p));
+      } catch (err) {
+        console.error('Auto-caption failed:', err);
+        set({ isTranscribing: false, transcribeStatus: null });
+        alert(`Auto-caption failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
     },
 
     setPlayhead: (frame) => {

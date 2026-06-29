@@ -38,12 +38,12 @@ and `src/**/*.test.ts` (Vitest).
 - [x] **8 — Export controls** — resolution / quality / format dialog + cancel.
 - [x] **9 — Captions** — caption effect (centered, outlined subtitle) + overlays list to
   re-select any text/caption.
+- [x] **10 — Auto-captions** — on-device Whisper (transformers.js) transcribes the audio into
+  timed captions. Lazy-loaded (~60 MB, fp32). Flow is mock-tested in e2e; the real model is
+  build-verified + checked by `npm run caption:smoke`. (`src/captions/`.)
 
 ## Phases planned (pick any — not strictly ordered)
 
-- [ ] **10 — Auto-captions** — transcribe audio with Whisper (transformers.js, on-device)
-  to auto-fill the caption track. High value; needs a ~40 MB model download (gate it behind
-  an explicit "download model" step). Hard to test deterministically.
 - [ ] **11 — Speed control** — slow-mo / speed-up per clip (affects clip duration mapping +
   audio resample).
 - [ ] **12 — More overlays** — lower-thirds, shapes/boxes, stickers (extend the Effect union).

@@ -31,6 +31,8 @@ export function Toolbar() {
   const remove = useEditor((s) => s.removeSelected);
   const addText = useEditor((s) => s.addTextEffect);
   const addCaption = useEditor((s) => s.addCaption);
+  const autoCaption = useEditor((s) => s.autoCaption);
+  const isTranscribing = useEditor((s) => s.isTranscribing);
   const hasSelection = useEditor((s) => Boolean(s.selectedClipId || s.selectedEffectId));
 
   const addTrack = useEditor((s) => s.addTrack);
@@ -82,6 +84,14 @@ export function Toolbar() {
         </button>
         <button className="btn" onClick={addCaption}>
           CC Caption
+        </button>
+        <button
+          className="btn"
+          onClick={() => void autoCaption()}
+          disabled={isTranscribing}
+          title="Transcribe the audio into captions (on-device)"
+        >
+          ✨ Auto-caption
         </button>
       </div>
 

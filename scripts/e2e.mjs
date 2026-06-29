@@ -270,6 +270,36 @@ try {
     'clicking an overlay selects it',
   );
 
+  log('STEP 13d — auto-captions (mocked on-device transcriber)');
+  await page.evaluate(() => {
+    window.__transcribeOverride = async () => [
+      { text: 'auto one', start: 0, end: 1 },
+      { text: 'auto two', start: 1, end: 2 },
+    ];
+  });
+  const captionCount = () =>
+    page.evaluate(
+      () =>
+        Object.values(window.__editor.getState().project.effects).filter(
+          (e) => e.type === 'caption',
+        ).length,
+    );
+  const capsBefore = await captionCount();
+  await page.click('button:has-text("Auto-caption")');
+  await page.waitForFunction(
+    (n) =>
+      Object.values(window.__editor.getState().project.effects).filter((e) => e.type === 'caption')
+        .length >= n,
+    capsBefore + 2,
+  );
+  assert((await captionCount()) === capsBefore + 2, `auto-captions added 2 (was ${capsBefore})`);
+  assert(
+    await page.evaluate(() =>
+      Object.values(window.__editor.getState().project.effects).some((e) => e.text === 'auto one'),
+    ),
+    'transcribed caption text inserted',
+  );
+
   log('STEP 14 — cross-dissolve transition between the two video clips');
   await page.locator('.lane--video .clip').nth(1).click(); // select the 2nd (later) clip
   await page.waitForSelector('button:has-text("Cross-dissolve")');

@@ -20,6 +20,7 @@ import { Inspector } from './ui/Inspector';
 import { Timeline } from './ui/Timeline';
 import { ExportOverlay } from './ui/ExportOverlay';
 import { ExportDialog } from './ui/ExportDialog';
+import { TranscribeOverlay } from './ui/TranscribeOverlay';
 import { useEditor } from './store/editorStore';
 import { restoreAndStartAutosave } from './store/autosave';
 import type { MediaId, TrackId } from './core/ids';
@@ -84,6 +85,7 @@ export default function App() {
       </div>
       <ExportDialog />
       <ExportOverlay />
+      <TranscribeOverlay />
     </DndContext>
   );
 }
