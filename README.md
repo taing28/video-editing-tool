@@ -99,6 +99,8 @@ src/
 
 ## Roadmap
 
+> Full phase checklist + how to resume work later: **[ROADMAP.md](ROADMAP.md)**.
+
 - ~~**Phase 2 — Export**~~ ✅ done: mediabunny `CanvasSource` + a deterministic
   fake-clock loop feeding the same `buildScene`; audio mixed with `OfflineAudioContext`
   at 48 kHz; H.264/MP4 with WebM fallback. See [src/render/export.ts](src/render/export.ts).
