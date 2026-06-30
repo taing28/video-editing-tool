@@ -4,7 +4,7 @@
  *
  *   node scripts/e2e.mjs
  */
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium } from 'playwright';
@@ -94,7 +94,10 @@ async function dragFromTo(page, fromSel, toSel) {
 try {
   await waitForServer();
   const browser = await launch(chromium);
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+    acceptDownloads: true,
+  });
   page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text()));
   page.on('pageerror', (e) => pageErrors.push(e.message));
 
@@ -105,7 +108,7 @@ try {
   assert(await page.locator('.lane').count() === 2, 'video + audio lanes present');
 
   log('STEP 2 — import image + audio');
-  await page.setInputFiles('input[type=file]', [pngPath, wavPath]);
+  await page.setInputFiles('.library input[type=file]', [pngPath, wavPath]);
   await page.waitForSelector('.media-card');
   await page.waitForFunction(() => document.querySelectorAll('.media-card').length === 2);
   assert(await page.locator('.media-card').count() === 2, 'two media cards appear');
@@ -558,6 +561,54 @@ try {
   assert((await page.locator('.modal').count()) === 0, 'export dialog closed');
 
   await page.screenshot({ path: SHOT });
+
+  log('STEP 19c — save project to a file, then reload + open it (full round-trip)');
+  const before = await page.evaluate(() => {
+    const p = window.__editor.getState().project;
+    return {
+      media: Object.keys(p.media).length,
+      effects: Object.keys(p.effects).length,
+      clips: Object.keys(p.clips).length,
+      name: p.name,
+    };
+  });
+  const dl = page.waitForEvent('download');
+  await page.click('button:has-text("Save")');
+  const download = await dl;
+  const savePath = path.join(tmp, 'roundtrip.videoproj.json');
+  await download.saveAs(savePath);
+  const bundle = JSON.parse(readFileSync(savePath, 'utf8'));
+  assert(bundle.format === 'video-editor-project', 'saved file is a project bundle');
+  assert(
+    Object.keys(bundle.media).length === before.media &&
+      Object.values(bundle.media).every((m) => m.data.startsWith('data:')),
+    'saved file embeds every media asset as bytes',
+  );
+
+  // Reload to a clean app (APP_URL is ?nopersist → no restore, fresh registry).
+  await page.goto(APP_URL, { waitUntil: 'networkidle' });
+  await page.waitForSelector('.app');
+  assert((await page.locator('.media-card').count()) === 0, 'reloaded app starts empty');
+  await page.setInputFiles('.toolbar input[type=file]', savePath);
+  await page.waitForFunction(
+    (n) => Object.keys(window.__editor.getState().project.media).length === n,
+    before.media,
+  );
+  const after = await page.evaluate(() => {
+    const p = window.__editor.getState().project;
+    return {
+      media: Object.keys(p.media).length,
+      effects: Object.keys(p.effects).length,
+      clips: Object.keys(p.clips).length,
+      name: p.name,
+    };
+  });
+  assert(after.media === before.media, `media round-trips (${before.media} -> ${after.media})`);
+  assert(after.effects === before.effects, `effects round-trip (${after.effects})`);
+  assert(after.clips === before.clips, `clips round-trip (${after.clips})`);
+  assert(after.name === before.name, `project name round-trips (${after.name})`);
+  await page.waitForTimeout(200);
+  assert((await previewLum(page)) > 100000, 're-imported project renders in the preview');
 
   log('STEP 20 — delete media removes its clips');
   const beforeMedia = await page.evaluate(

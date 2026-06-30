@@ -1,6 +1,7 @@
 /**
  * ui/Toolbar — transport + editing actions across the top.
  */
+import { useRef } from 'react';
 import { useEditor } from '../store/editorStore';
 import { formatTimecode } from '../core/time';
 import { checkExportSupport } from '../render/capabilities';
@@ -47,6 +48,10 @@ export function Toolbar() {
   const openExportDialog = useEditor((s) => s.openExportDialog);
   const isExporting = useEditor((s) => s.isExporting);
   const support = checkExportSupport();
+
+  const saveProjectFile = useEditor((s) => s.saveProjectFile);
+  const openProjectFile = useEditor((s) => s.openProjectFile);
+  const openInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <header className="toolbar">
@@ -143,6 +148,31 @@ export function Toolbar() {
             onChange={(e) => setZoom(Number(e.target.value))}
           />
         </label>
+        <button
+          className="btn"
+          onClick={() => void saveProjectFile()}
+          title="Save the project (timeline + media) to a file you can back up or reopen"
+        >
+          💾 Save
+        </button>
+        <button
+          className="btn"
+          onClick={() => openInputRef.current?.click()}
+          title="Open a saved project file (replaces the current project)"
+        >
+          📂 Open
+        </button>
+        <input
+          ref={openInputRef}
+          type="file"
+          accept=".json,application/json"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void openProjectFile(f);
+            e.target.value = ''; // allow re-opening the same file
+          }}
+        />
         <button
           className="btn btn--primary"
           onClick={openExportDialog}

@@ -121,6 +121,11 @@ export function getDrawable(id: MediaId): CanvasImageSource | undefined {
   return entries.get(id)?.drawable;
 }
 
+/** The original imported File for a media id (for bundling into a project file). */
+export function getMediaFile(id: MediaId): File | undefined {
+  return entries.get(id)?.file;
+}
+
 /** The underlying <video> element for a video asset (for seeking/playback). */
 export function getVideoElement(id: MediaId): HTMLVideoElement | undefined {
   const entry = entries.get(id);

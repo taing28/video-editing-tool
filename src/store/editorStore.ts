@@ -64,6 +64,7 @@ import { importFile } from '../media/registry';
 import { exportProject, type ExportOptions } from '../render/export';
 import * as audioEngine from '../playback/audioEngine';
 import * as persistence from './persistence';
+import { buildProjectBundle, bundleFileName, importProjectBundle } from './projectFile';
 import { transcribe } from '../captions/transcribe';
 import { segmentsToCaptions, mixProjectAudioMono16k } from '../captions/captions';
 
@@ -161,6 +162,10 @@ export interface EditorState {
   newProject: () => void;
   /** Replace the whole document (used by restore-from-storage). */
   loadProject: (project: Project) => void;
+  /** Download the whole project (timeline + media) as one portable file. */
+  saveProjectFile: () => Promise<void>;
+  /** Open a previously-saved project file, replacing the current document. */
+  openProjectFile: (file: File) => Promise<void>;
 }
 
 // rAF handle for the playback clock (non-reactive, module-scoped).
@@ -630,6 +635,25 @@ export const useEditor = create<EditorState>((set, get) => {
         past: [],
         future: [],
       });
+    },
+
+    saveProjectFile: async () => {
+      const project = get().project;
+      const blob = await buildProjectBundle(project);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = bundleFileName(project);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    },
+
+    openProjectFile: async (file) => {
+      const text = await file.text();
+      const project = await importProjectBundle(text); // rebuilds media first
+      get().loadProject(project);
     },
   };
 });

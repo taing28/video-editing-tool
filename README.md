@@ -14,7 +14,7 @@ npm run verify     # typecheck + unit tests + browser e2e + export test (full ga
 npm run build      # typecheck + production build
 ```
 
-## What works today (Phases 0–19)
+## What works today (Phases 0–20)
 
 - Import images / audio / **video** (Import button, or drop files on the sidebar).
 - Drag a media card onto a track (or double-click to add).
@@ -67,6 +67,8 @@ npm run build      # typecheck + production build
   (falls back to VP9/VP8 WebM), with all audio tracks mixed down via `OfflineAudioContext`.
 - **Autosave** — the project (and imported media) is saved to IndexedDB and restored on
   refresh, so you don't lose work.
+- **Save / Open project file** — export the whole project (timeline **+ media bytes**) as one
+  portable `.videoproj.json` you can back up, share, or reopen on another machine.
 - Undo/redo, keyboard shortcuts (Space, ⌘/Ctrl+Z, Delete, S to split).
 
 **Not yet wired:** auto-transcription (Whisper) to fill the caption track; speed control;
@@ -146,7 +148,8 @@ src/
 - ~~**Phase 17 — Object-fit**~~ ✅ done: Fit / Fill (cover) / Stretch reframing for visual clips.
 - ~~**Phase 18 — Overlay fades**~~ ✅ done: fade in/out for text / caption / shape overlays.
 - ~~**Phase 19 — Video color grading**~~ ✅ done: per-frame brightness/contrast/saturation on video.
-- **Next — More:** platform export presets, stickers, project file export/import.
+- ~~**Phase 20 — Project file save/open**~~ ✅ done: portable `.videoproj.json` (timeline + media).
+- **Next — More:** platform export presets, stickers, Web-Worker export.
 - **Later — Scale:** move render+encode into a Web Worker (note: `OfflineAudioContext` +
   `<video>` seeking are main-thread-only, so this mainly helps pure image+audio projects).
 - Optional: wrap in Electron + mediabunny's server backend for native-speed export.

@@ -6,6 +6,7 @@
  */
 import { useEditor } from './editorStore';
 import * as persistence from './persistence';
+import { migrateProject } from './migrate';
 import { reimportFile } from '../media/registry';
 import type { MediaId } from '../core/ids';
 
@@ -28,22 +29,7 @@ export async function restoreAndStartAutosave(): Promise<void> {
     const saved = await persistence.loadProject();
     if (saved) {
       // Migrate documents saved by older versions (fields added in later phases).
-      for (const clip of Object.values(saved.clips)) {
-        const c = clip as unknown as {
-          speed?: number;
-          transition?: string;
-          motion?: string;
-          duck?: boolean;
-          adjust?: { brightness: number; contrast: number; saturate: number };
-          kind?: string;
-        };
-        if (typeof c.speed !== 'number') c.speed = 1;
-        if (c.kind !== 'audio' && c.transition === undefined) c.transition = 'dissolve';
-        if (c.kind !== 'audio' && c.motion === undefined) c.motion = 'none';
-        if (c.kind !== 'audio' && c.adjust === undefined)
-          c.adjust = { brightness: 1, contrast: 1, saturate: 1 };
-        if (c.kind === 'audio' && typeof c.duck !== 'boolean') c.duck = false;
-      }
+      migrateProject(saved);
       // Rebuild runtime media (drawables / decoded elements) from saved blobs,
       // and refresh each asset's object URL.
       for (const asset of Object.values(saved.media)) {

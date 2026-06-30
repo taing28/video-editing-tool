@@ -50,7 +50,7 @@ try {
   log('PHASE A — generate a video fixture via export');
   await page.goto(APP_URL, { waitUntil: 'networkidle' });
   await page.waitForSelector('.app');
-  await page.setInputFiles('input[type=file]', [pngPath]);
+  await page.setInputFiles('.library input[type=file]', [pngPath]);
   await page.waitForSelector('.media-card--image');
   await page.dblclick('.media-card--image');
   await page.waitForSelector('.lane--video .clip');
@@ -64,7 +64,7 @@ try {
   log('PHASE B — import the MP4 as a video clip');
   await page.goto(APP_URL, { waitUntil: 'networkidle' }); // reset app state
   await page.waitForSelector('.app');
-  await page.setInputFiles('input[type=file]', [fixture]);
+  await page.setInputFiles('.library input[type=file]', [fixture]);
   await page.waitForSelector('.media-card--video');
   assert((await page.locator('.media-card--video').count()) === 1, 'video appears in media library');
 

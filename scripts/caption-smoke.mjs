@@ -37,7 +37,7 @@ try {
 
   await page.goto(APP_URL, { waitUntil: 'networkidle' });
   await page.waitForSelector('.app');
-  await page.setInputFiles('input[type=file]', [wavPath]);
+  await page.setInputFiles('.library input[type=file]', [wavPath]);
   await page.waitForSelector('.media-card--audio');
   await page.dblclick('.media-card--audio');
   await page.waitForSelector('.lane--audio .clip');

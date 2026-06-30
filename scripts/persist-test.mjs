@@ -50,7 +50,7 @@ try {
   log('build a project: import + clip + text');
   await page.goto(URL, { waitUntil: 'networkidle' });
   await page.waitForSelector('.app');
-  await page.setInputFiles('input[type=file]', [pngPath, wavPath]);
+  await page.setInputFiles('.library input[type=file]', [pngPath, wavPath]);
   await page.waitForFunction(() => document.querySelectorAll('.media-card').length === 2);
   await page.dblclick('.media-card--image');
   await page.waitForSelector('.lane--video .clip');
