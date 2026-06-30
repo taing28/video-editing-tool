@@ -21,6 +21,8 @@ export const APP_URL = `${URL}?nopersist=1`;
 export function startServer() {
   const proc = spawn('npx', ['vite', '--port', String(PORT), '--strictPort'], {
     stdio: ['ignore', 'pipe', 'pipe'],
+    // On Windows `npx` is `npx.cmd`; spawn needs a shell to resolve it.
+    shell: process.platform === 'win32',
   });
   proc.stderr.on('data', (d) => process.stderr.write(`[vite] ${d}`));
   return proc;

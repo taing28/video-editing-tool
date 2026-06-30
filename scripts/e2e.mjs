@@ -227,11 +227,14 @@ try {
     return ed.project.clips[ed.selectedClipId].gain;
   });
   assert(Math.abs(gain - 1.5) < 0.06, `volume set via inspector (${gain})`);
-  await page.locator('.inspector input[type=number]').first().evaluate((el) => {
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-    setter.call(el, '0.5');
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-  });
+  await page
+    .locator('.inspector label:has(span:text-is("Fade in (s)")) input')
+    .first()
+    .evaluate((el) => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+      setter.call(el, '0.5');
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
   const fadeIn = await page.evaluate(() => {
     const ed = window.__editor.getState();
     return ed.project.clips[ed.selectedClipId].fadeInFrames;

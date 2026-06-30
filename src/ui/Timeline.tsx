@@ -18,6 +18,7 @@ import { snapStart, snapTargets } from '../core/snapping';
 import { secondsToFrames } from '../core/time';
 import { Waveform } from './Waveform';
 import { ClipFilmstrip } from './ClipFilmstrip';
+import { ScrollArea } from './ScrollArea';
 
 /** Width of the sticky track-label gutter; clips/ruler/playhead align after it. */
 const LABEL_WIDTH = 92;
@@ -253,7 +254,7 @@ export function Timeline() {
 
   return (
     <section className="timeline">
-      <div className="timeline__scroll">
+      <ScrollArea className="timeline__scroll" orientation="both">
         <div
           className="timeline__content"
           ref={contentRef}
@@ -274,7 +275,7 @@ export function Timeline() {
           ))}
           <div className="playhead" style={{ left: LABEL_WIDTH + playhead * pxPerFrame }} />
         </div>
-      </div>
+      </ScrollArea>
     </section>
   );
 }

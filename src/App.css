@@ -837,7 +837,8 @@
 .timeline__scroll {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  /* The Radix ScrollArea Root owns this element now; its viewport scrolls. */
+  overflow: hidden;
 }
 .timeline__content {
   position: relative;

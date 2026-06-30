@@ -22,6 +22,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@huggingface/transformers": "^4.2.0",
+    "@radix-ui/react-scroll-area": "^1.2.13",
     "konva": "^10.3.0",
     "mediabunny": "^1.49.0",
     "nanoid": "^5.1.16",
