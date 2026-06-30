@@ -14,7 +14,7 @@ npm run verify     # typecheck + unit tests + browser e2e + export test (full ga
 npm run build      # typecheck + production build
 ```
 
-## What works today (Phases 0–20)
+## What works today (Phases 0–21)
 
 - Import images / audio / **video** (Import button, or drop files on the sidebar).
 - Drag a media card onto a track (or double-click to add).
@@ -69,7 +69,8 @@ npm run build      # typecheck + production build
   refresh, so you don't lose work.
 - **Save / Open project file** — export the whole project (timeline **+ media bytes**) as one
   portable `.videoproj.json` you can back up, share, or reopen on another machine.
-- Undo/redo, keyboard shortcuts (Space, ⌘/Ctrl+Z, Delete, S to split).
+- **Duplicate** a clip or overlay (⧉ button / ⌘/Ctrl+D) — repeat a configured photo or title.
+- Undo/redo, keyboard shortcuts (Space, ⌘/Ctrl+Z, ⌘/Ctrl+D to duplicate, Delete, S to split).
 
 **Not yet wired:** auto-transcription (Whisper) to fill the caption track; speed control;
 lower-thirds / more overlay types; other transition styles; Web-Worker render.
@@ -149,6 +150,7 @@ src/
 - ~~**Phase 18 — Overlay fades**~~ ✅ done: fade in/out for text / caption / shape overlays.
 - ~~**Phase 19 — Video color grading**~~ ✅ done: per-frame brightness/contrast/saturation on video.
 - ~~**Phase 20 — Project file save/open**~~ ✅ done: portable `.videoproj.json` (timeline + media).
+- ~~**Phase 21 — Duplicate**~~ ✅ done: duplicate a clip or overlay (⌘/Ctrl+D).
 - **Next — More:** platform export presets, stickers, Web-Worker export.
 - **Later — Scale:** move render+encode into a Web Worker (note: `OfflineAudioContext` +
   `<video>` seeking are main-thread-only, so this mainly helps pure image+audio projects).

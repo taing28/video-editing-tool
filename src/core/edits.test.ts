@@ -13,6 +13,7 @@ import {
   setClipGain,
   setClipSpeed,
   fitClip,
+  duplicateClip,
 } from './edits';
 import {
   getTrackClips,
@@ -274,5 +275,29 @@ describe('effectOpacity (overlay fades)', () => {
     expect(effectOpacity(e, 105)).toBeCloseTo(0.5);
     expect(effectOpacity(e, 150)).toBeCloseTo(1); // middle
     expect(effectOpacity(e, 195)).toBeCloseTo(0.5); // fading out
+  });
+});
+
+describe('duplicateClip', () => {
+  it('clones the clip onto the end of its track with a fresh id', () => {
+    const { p, clipId, videoTrackId } = setup(); // clip at 100..200, dur 100
+    const newId = newClipId();
+    const out = duplicateClip(p, clipId, newId);
+    const copy = out.clips[newId];
+    const orig = out.clips[clipId];
+    expect(copy).toBeTruthy();
+    expect(copy.id).toBe(newId);
+    expect(copy.startFrame).toBe(200); // appended after the original's end
+    expect(copy.durationInFrames).toBe(orig.durationInFrames);
+    expect(copy.kind).toBe(orig.kind);
+    // both clips are on the track, in order
+    expect(out.tracks[videoTrackId].clipOrder).toEqual([clipId, newId]);
+    // effectIds is a fresh array, not shared
+    expect(copy.effectIds).not.toBe(orig.effectIds);
+  });
+
+  it('is a no-op for an unknown clip', () => {
+    const { p } = setup();
+    expect(duplicateClip(p, newClipId(), newClipId())).toBe(p); // id not in project
   });
 });

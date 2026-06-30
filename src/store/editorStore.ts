@@ -30,6 +30,8 @@ import type { Frames } from '../core/time';
 import { clampFrame, secondsToFrames } from '../core/time';
 import {
   addMedia,
+  duplicateClip as duplicateClipEdit,
+  duplicateEffect as duplicateEffectEdit,
   insertClip,
   insertEffect,
   insertTrack as insertTrackEdit,
@@ -113,6 +115,8 @@ export interface EditorState {
   removeMedia: (mediaId: MediaId) => void;
   addClipFromMedia: (mediaId: MediaId, trackId: TrackId) => void;
   removeSelected: () => void;
+  /** Duplicate the selected clip (appended on its track) or overlay (nudged). */
+  duplicateSelected: () => void;
   splitSelectedAtPlayhead: () => void;
   /** Overlap the selected video clip with the previous one to create a cross-dissolve. */
   addTransition: () => void;
@@ -297,6 +301,19 @@ export const useEditor = create<EditorState>((set, get) => {
       } else if (selectedEffectId) {
         commit((p) => removeEffectEdit(p, selectedEffectId));
         set({ selectedEffectId: null });
+      }
+    },
+
+    duplicateSelected: () => {
+      const { selectedClipId, selectedEffectId } = get();
+      if (selectedClipId) {
+        const newId = newClipId();
+        commit((p) => duplicateClipEdit(p, selectedClipId, newId));
+        set({ selectedClipId: newId, selectedEffectId: null });
+      } else if (selectedEffectId) {
+        const newId = newEffectId();
+        commit((p) => duplicateEffectEdit(p, selectedEffectId, newId));
+        set({ selectedEffectId: newId, selectedClipId: null });
       }
     },
 

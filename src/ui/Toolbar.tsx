@@ -29,6 +29,7 @@ export function Toolbar() {
   const canRedo = useEditor((s) => s.future.length > 0);
 
   const split = useEditor((s) => s.splitSelectedAtPlayhead);
+  const duplicate = useEditor((s) => s.duplicateSelected);
   const remove = useEditor((s) => s.removeSelected);
   const addText = useEditor((s) => s.addTextEffect);
   const addCaption = useEditor((s) => s.addCaption);
@@ -82,6 +83,14 @@ export function Toolbar() {
         </button>
         <button className="btn" onClick={split} disabled={!hasSelection} title="Split at playhead">
           ✂ Split
+        </button>
+        <button
+          className="btn"
+          onClick={duplicate}
+          disabled={!hasSelection}
+          title="Duplicate the selection (⌘/Ctrl+D)"
+        >
+          ⧉ Duplicate
         </button>
         <button className="btn" onClick={remove} disabled={!hasSelection}>
           🗑 Delete

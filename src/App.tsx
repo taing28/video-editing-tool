@@ -32,6 +32,7 @@ export default function App() {
   const undo = useEditor((s) => s.undo);
   const redo = useEditor((s) => s.redo);
   const removeSelected = useEditor((s) => s.removeSelected);
+  const duplicateSelected = useEditor((s) => s.duplicateSelected);
   const splitSelectedAtPlayhead = useEditor((s) => s.splitSelectedAtPlayhead);
 
   // Restore any saved project on first mount, then keep autosaving.
@@ -62,6 +63,9 @@ export default function App() {
         e.preventDefault();
         if (e.shiftKey) redo();
         else undo();
+      } else if (mod && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        duplicateSelected();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         removeSelected();
       } else if (e.key.toLowerCase() === 's' && !mod) {
@@ -70,7 +74,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [togglePlay, undo, redo, removeSelected, splitSelectedAtPlayhead]);
+  }, [togglePlay, undo, redo, removeSelected, duplicateSelected, splitSelectedAtPlayhead]);
 
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>

@@ -399,6 +399,31 @@ export function fitClip(p: Project, clipId: ClipId, mode: FitMode): Project {
   return { ...p, clips: { ...p.clips, [clipId]: { ...clip, transform: box } } };
 }
 
+/** Clone a clip onto the END of its track (no overlap), with a new id. */
+export function duplicateClip(p: Project, clipId: ClipId, newId: ClipId): Project {
+  const clip = p.clips[clipId];
+  if (!clip) return p;
+  const track = p.tracks[clip.trackId];
+  if (!track) return p;
+  const trackEnd = track.clipOrder.reduce((max, cid) => {
+    const c = p.clips[cid];
+    return c ? Math.max(max, c.startFrame + c.durationInFrames) : max;
+  }, 0);
+  const copy: Clip = { ...clip, id: newId, startFrame: trackEnd, effectIds: [...clip.effectIds] };
+  return insertClip(p, copy);
+}
+
+/** Clone an overlay with a new id, nudged so it isn't exactly atop the original. */
+export function duplicateEffect(p: Project, effectId: EffectId, newId: EffectId): Project {
+  const eff = p.effects[effectId];
+  if (!eff) return p;
+  let copy: Effect;
+  if (eff.type === 'text') copy = { ...eff, id: newId, x: eff.x + 20, y: eff.y + 20 };
+  else if (eff.type === 'shape') copy = { ...eff, id: newId, x: eff.x + 20, y: eff.y + 20 };
+  else copy = { ...eff, id: newId };
+  return { ...p, effects: { ...p.effects, [newId]: copy } };
+}
+
 /** Set a video/image clip's transition-in style. */
 export function setClipTransition(
   p: Project,

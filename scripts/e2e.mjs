@@ -626,6 +626,22 @@ try {
     'image clips removed with the media',
   );
 
+  log('STEP 21 — duplicate a clip (appends a copy on its track)');
+  await page.click('.lane--audio .clip'); // select an audio clip
+  const aBefore = await clipCount(page, 'audio');
+  await page.click('button:has-text("Duplicate")');
+  await page.waitForFunction(
+    (n) => document.querySelectorAll('.lane--audio .clip').length === n,
+    aBefore + 1,
+  );
+  assert((await clipCount(page, 'audio')) === aBefore + 1, `duplicate added a clip (${aBefore} -> ${aBefore + 1})`);
+  const dup = await page.evaluate(() => {
+    const ed = window.__editor.getState();
+    const sel = ed.project.clips[ed.selectedClipId];
+    return { selectedIsCopy: Boolean(sel), kind: sel?.kind };
+  });
+  assert(dup.selectedIsCopy && dup.kind === 'audio', 'the new copy is selected');
+
   await browser.close();
 
   log('\n--- console.errors ---');

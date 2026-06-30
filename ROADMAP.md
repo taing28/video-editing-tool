@@ -17,7 +17,7 @@ npm run verify   # FULL gate: typecheck + unit + e2e + export + video + persist
 Architecture overview + file map: see `README.md`. Tests live in `scripts/` (Playwright)
 and `src/**/*.test.ts` (Vitest).
 
-## Status: Phase 20 complete ✅ — `npm run verify` green (52 unit + e2e + export + video + persist)
+## Status: Phase 21 complete ✅ — `npm run verify` green (54 unit + e2e + export + video + persist)
 
 ## Phases done
 
@@ -87,6 +87,10 @@ and `src/**/*.test.ts` (Vitest).
   as data URLs) so a project can be backed up, shared, or moved between machines. `src/store/
   projectFile.ts` (`buildProjectBundle`/`importProjectBundle`); migration extracted to `migrate.ts`
   (shared with autosave); Toolbar 💾 Save / 📂 Open. e2e proves a full round-trip in a clean app.
+
+- [x] **21 — Duplicate clip / overlay** — `duplicateClip` (clone onto the track end, fresh id +
+  effectIds) and `duplicateEffect` (clone nudged +20px) in `edits.ts`; `duplicateSelected` store
+  action; ⧉ Duplicate toolbar button + ⌘/Ctrl+D. Handy for repeating a configured photo or title.
 
 ## Phases planned (pick any — not strictly ordered)
 
