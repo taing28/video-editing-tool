@@ -545,10 +545,20 @@ function OverlaysList() {
           <li key={e.id} className="overlays__item">
             <button className="overlays__select" onClick={() => selectEffect(e.id)}>
               <span className="overlays__type">
-                {e.type === 'caption' ? 'CC' : e.type === 'shape' ? '▭' : 'T'}
+                {e.type === 'caption'
+                  ? 'CC'
+                  : e.type === 'shape'
+                    ? '▭'
+                    : e.type === 'image'
+                      ? '🖼'
+                      : 'T'}
               </span>
               <span className="overlays__text">
-                {e.type === 'shape' ? 'Shape' : e.text || '(empty)'}
+                {e.type === 'shape'
+                  ? 'Shape'
+                  : e.type === 'image'
+                    ? 'Image'
+                    : e.text || '(empty)'}
               </span>
             </button>
             <button

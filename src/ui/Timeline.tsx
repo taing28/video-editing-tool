@@ -12,7 +12,7 @@
 import { memo, useRef } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useEditor } from '../store/editorStore';
-import type { Project, Clip } from '../core/model';
+import type { Project, Clip, Effect } from '../core/model';
 import { getTracksInOrder, getTrackClips } from '../core/selectors';
 import { snapStart, snapTargets } from '../core/snapping';
 import { secondsToFrames } from '../core/time';
@@ -131,6 +131,152 @@ function labelFor(clip: Clip, name?: string): string {
   return name ?? clip.kind;
 }
 
+// --- overlay lanes (one row per timed overlay) -----------------------------
+
+function overlayIcon(e: Effect): string {
+  if (e.type === 'caption') return 'CC';
+  if (e.type === 'shape') return '▭';
+  if (e.type === 'image') return '🖼';
+  return 'T';
+}
+
+function overlayLabel(e: Effect, mediaName?: string): string {
+  if (e.type === 'caption') return e.text || 'Caption';
+  if (e.type === 'shape') return 'Shape';
+  if (e.type === 'image') return mediaName ?? 'Image';
+  return e.text || 'Text';
+}
+
+interface OverlayDragState {
+  mode: 'move' | 'trim-start' | 'trim-end';
+  startX: number;
+  origStart: number;
+  origEnd: number;
+  baseline: Project;
+  started: boolean;
+}
+
+/** A draggable/trimmable block for one overlay, reusing the clip block chrome. */
+const OverlayBlock = memo(function OverlayBlock({
+  effect,
+  pxPerFrame,
+}: {
+  effect: Effect;
+  pxPerFrame: number;
+}) {
+  const selectedEffectId = useEditor((s) => s.selectedEffectId);
+  const selectEffect = useEditor((s) => s.selectEffect);
+  const beginInteraction = useEditor((s) => s.beginInteraction);
+  const applyEffectMove = useEditor((s) => s.applyEffectMove);
+  const applyEffectTrimStart = useEditor((s) => s.applyEffectTrimStart);
+  const applyEffectTrimEnd = useEditor((s) => s.applyEffectTrimEnd);
+  const media = useEditor((s) =>
+    effect.type === 'image' ? s.project.media[effect.mediaId] : undefined,
+  );
+
+  const drag = useRef<OverlayDragState | null>(null);
+  const selected = selectedEffectId === effect.id;
+
+  const startDrag = (mode: OverlayDragState['mode']) => (e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    (e.target as Element).setPointerCapture(e.pointerId);
+    selectEffect(effect.id);
+    const state = useEditor.getState();
+    drag.current = {
+      mode,
+      startX: e.clientX,
+      origStart: effect.timing.start,
+      origEnd: effect.timing.start + effect.timing.duration,
+      baseline: state.project,
+      started: false,
+    };
+  };
+
+  const onMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    if (!d.started) {
+      if (Math.abs(e.clientX - d.startX) < 3) return;
+      d.started = true;
+      beginInteraction();
+    }
+    const deltaFrames = Math.round((e.clientX - d.startX) / pxPerFrame);
+    if (d.mode === 'move') applyEffectMove(d.baseline, effect.id, d.origStart + deltaFrames);
+    else if (d.mode === 'trim-start')
+      applyEffectTrimStart(d.baseline, effect.id, d.origStart + deltaFrames);
+    else applyEffectTrimEnd(d.baseline, effect.id, d.origEnd + deltaFrames);
+  };
+
+  const endDrag = (e: React.PointerEvent) => {
+    if (drag.current) (e.target as Element).releasePointerCapture?.(e.pointerId);
+    drag.current = null;
+  };
+
+  return (
+    <div
+      className={`clip clip--overlay clip--ov-${effect.type}${selected ? ' is-selected' : ''}`}
+      style={{
+        left: effect.timing.start * pxPerFrame,
+        width: effect.timing.duration * pxPerFrame,
+      }}
+      onPointerDown={startDrag('move')}
+      onPointerMove={onMove}
+      onPointerUp={endDrag}
+    >
+      <span
+        className="clip__handle clip__handle--l"
+        data-tip="Drag to change when this overlay starts."
+        onPointerDown={startDrag('trim-start')}
+      />
+      <span className="clip__label">{overlayLabel(effect, media?.name)}</span>
+      <span
+        className="clip__handle clip__handle--r"
+        data-tip="Drag to change when this overlay ends."
+        onPointerDown={startDrag('trim-end')}
+      />
+    </div>
+  );
+});
+
+function OverlayLane({ effect, pxPerFrame }: { effect: Effect; pxPerFrame: number }) {
+  const removeEffect = useEditor((s) => s.removeEffect);
+  const selectEffect = useEditor((s) => s.selectEffect);
+  const selected = useEditor((s) => s.selectedEffectId === effect.id);
+  const media = useEditor((s) =>
+    effect.type === 'image' ? s.project.media[effect.mediaId] : undefined,
+  );
+
+  return (
+    <div className={`lane lane--overlay${selected ? ' is-active' : ''}`}>
+      <div className="lane__label">
+        <span className="lane__name" title={overlayLabel(effect, media?.name)}>
+          <span className="lane__ico">{overlayIcon(effect)}</span>
+          {overlayLabel(effect, media?.name)}
+        </span>
+        <div className="lane__controls">
+          <button
+            className="lane__delete"
+            title="Delete overlay"
+            aria-label="Delete overlay"
+            onClick={() => removeEffect(effect.id)}
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+      <div
+        className="lane__area"
+        onPointerDown={(e) => {
+          if ((e.target as HTMLElement).classList.contains('lane__area')) selectEffect(null);
+        }}
+      >
+        <OverlayBlock effect={effect} pxPerFrame={pxPerFrame} />
+      </div>
+    </div>
+  );
+}
+
 function TrackLane({ trackId, pxPerFrame }: { trackId: string; pxPerFrame: number }) {
   const project = useEditor((s) => s.project);
   const removeTrack = useEditor((s) => s.removeTrack);
@@ -240,8 +386,21 @@ export function Timeline() {
 
   const contentRef = useRef<HTMLDivElement>(null);
   const tracks = getTracksInOrder(project);
+  // Overlays in creation order (object insertion order survives JSON round-trip);
+  // each gets its own lane above the tracks so its start/end is set visually.
+  const overlays = Object.values(project.effects);
 
-  const minFrames = Math.max(project.durationInFrames, secondsToFrames(20, project.fps));
+  // Reach the furthest overlay too, so a block dragged past the last clip stays
+  // scrollable into view (overlays don't extend the document duration).
+  const lastOverlayEnd = overlays.reduce(
+    (m, e) => Math.max(m, e.timing.start + e.timing.duration),
+    0,
+  );
+  const minFrames = Math.max(
+    project.durationInFrames,
+    lastOverlayEnd,
+    secondsToFrames(20, project.fps),
+  );
   const contentWidth = LABEL_WIDTH + minFrames * pxPerFrame + 240;
 
   const scrubToClientX = (clientX: number) => {
@@ -270,6 +429,9 @@ export function Timeline() {
             durationFrames={minFrames}
             onScrub={scrubToClientX}
           />
+          {overlays.map((effect) => (
+            <OverlayLane key={effect.id} effect={effect} pxPerFrame={pxPerFrame} />
+          ))}
           {tracks.map((track) => (
             <TrackLane key={track.id} trackId={track.id} pxPerFrame={pxPerFrame} />
           ))}

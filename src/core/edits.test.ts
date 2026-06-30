@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createEmptyProject, coverBox, containedBox } from './model';
 import type { VideoClip, MediaAsset } from './model';
-import { newClipId, newMediaId } from './ids';
+import { newClipId, newMediaId, newEffectId } from './ids';
 import {
   addMedia,
   insertClip,
@@ -14,6 +14,10 @@ import {
   setClipSpeed,
   fitClip,
   duplicateClip,
+  insertEffect,
+  moveEffect,
+  trimEffectStart,
+  trimEffectEnd,
 } from './edits';
 import {
   getTrackClips,
@@ -299,5 +303,60 @@ describe('duplicateClip', () => {
   it('is a no-op for an unknown clip', () => {
     const { p } = setup();
     expect(duplicateClip(p, newClipId(), newClipId())).toBe(p); // id not in project
+  });
+});
+
+describe('overlay timing reducers (timeline lanes)', () => {
+  function withEffect() {
+    let p = createEmptyProject({ fps: 30 });
+    const id = newEffectId();
+    const eff = {
+      id,
+      type: 'text',
+      timing: { start: 100, duration: 60 }, // frames 100..159
+      text: 'hi',
+      fontSize: 40,
+      fontWeight: 700,
+      fontFamily: 'sans',
+      color: '#fff',
+      x: 0,
+      y: 0,
+      align: 'left',
+    } as unknown as Effect;
+    p = insertEffect(p, eff);
+    return { p, id };
+  }
+
+  it('moveEffect shifts start, keeps duration, clamps to >= 0', () => {
+    const { p, id } = withEffect();
+    expect(moveEffect(p, id, 250).effects[id].timing).toEqual({ start: 250, duration: 60 });
+    expect(moveEffect(p, id, -20).effects[id].timing).toEqual({ start: 0, duration: 60 });
+  });
+
+  it('trimEffectStart keeps the end fixed and shortens from the left', () => {
+    const { p, id } = withEffect(); // end = 160
+    const t = trimEffectStart(p, id, 130).effects[id].timing;
+    expect(t.start).toBe(130);
+    expect(t.duration).toBe(30); // end still 160
+  });
+
+  it('trimEffectStart cannot cross the end (leaves >= 1 frame)', () => {
+    const { p, id } = withEffect(); // end = 160
+    const t = trimEffectStart(p, id, 999).effects[id].timing;
+    expect(t).toEqual({ start: 159, duration: 1 });
+  });
+
+  it('trimEffectEnd changes only duration (>= 1)', () => {
+    const { p, id } = withEffect(); // start 100
+    expect(trimEffectEnd(p, id, 220).effects[id].timing).toEqual({ start: 100, duration: 120 });
+    expect(trimEffectEnd(p, id, 50).effects[id].timing).toEqual({ start: 100, duration: 1 });
+  });
+
+  it('all three are no-ops for an unknown effect id', () => {
+    const { p } = withEffect();
+    const ghost = newEffectId();
+    expect(moveEffect(p, ghost, 10)).toBe(p);
+    expect(trimEffectStart(p, ghost, 10)).toBe(p);
+    expect(trimEffectEnd(p, ghost, 10)).toBe(p);
   });
 });

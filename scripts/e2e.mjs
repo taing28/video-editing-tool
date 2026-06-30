@@ -327,6 +327,26 @@ try {
     `text overlay fade-in ~15f stored (${fadeInFrames})`,
   );
 
+  log('STEP 8d — drag the overlay timeline lane to retime its start');
+  assert(
+    (await page.locator('.lane--overlay .clip--overlay').count()) === 1,
+    'the text overlay has its own timeline lane',
+  );
+  const ovStart0 = await page.evaluate(() => {
+    const ed = window.__editor.getState();
+    return ed.project.effects[ed.selectedEffectId].timing;
+  });
+  await dragBy(page, '.lane--overlay .clip--overlay', 72, 0); // +72px ≈ +12 frames @ 6px/frame
+  const ovStart1 = await page.evaluate(() => {
+    const ed = window.__editor.getState();
+    return ed.project.effects[ed.selectedEffectId].timing;
+  });
+  assert(
+    ovStart1.start > ovStart0.start + 3,
+    `overlay lane drag moved its start (${ovStart0.start} -> ${ovStart1.start})`,
+  );
+  assert(ovStart1.duration === ovStart0.duration, 'moving the overlay kept its duration');
+
   log('STEP 9 — scrub moves playhead');
   const tc0 = await page.textContent('.toolbar__time');
   await page.click('.ruler', { position: { x: 200, y: 12 } });

@@ -331,6 +331,48 @@ export function removeEffect(p: Project, effectId: EffectId): Project {
   return { ...p, effects };
 }
 
+// --- overlay timing (timeline lanes) ---------------------------------------
+// Overlays carry their own `timing` range, independent of any clip. These three
+// mirror the clip move/trim reducers but on `effect.timing`. Overlays have no
+// source bound, so length is limited only by start >= 0 and duration >= 1.
+
+function putEffectTiming(
+  p: Project,
+  effectId: EffectId,
+  timing: { start: Frames; duration: Frames },
+): Project {
+  const eff = p.effects[effectId];
+  return { ...p, effects: { ...p.effects, [effectId]: { ...eff, timing } } };
+}
+
+/** Move a timed overlay to a new start frame (clamped >= 0); duration unchanged. */
+export function moveEffect(p: Project, effectId: EffectId, newStart: Frames): Project {
+  const eff = p.effects[effectId];
+  if (!eff) return p;
+  const start = Math.max(0, Math.round(newStart));
+  if (start === eff.timing.start) return p;
+  return putEffectTiming(p, effectId, { start, duration: eff.timing.duration });
+}
+
+/** Drag the LEFT edge: the end stays put, start + duration change (duration >= 1). */
+export function trimEffectStart(p: Project, effectId: EffectId, newStart: Frames): Project {
+  const eff = p.effects[effectId];
+  if (!eff) return p;
+  const end = eff.timing.start + eff.timing.duration;
+  const start = clampFrame(Math.round(newStart), 0, end - 1);
+  if (start === eff.timing.start) return p;
+  return putEffectTiming(p, effectId, { start, duration: end - start });
+}
+
+/** Drag the RIGHT edge: the start stays put, only duration changes (duration >= 1). */
+export function trimEffectEnd(p: Project, effectId: EffectId, newEnd: Frames): Project {
+  const eff = p.effects[effectId];
+  if (!eff) return p;
+  const duration = Math.max(1, Math.round(newEnd) - eff.timing.start);
+  if (duration === eff.timing.duration) return p;
+  return putEffectTiming(p, effectId, { start: eff.timing.start, duration });
+}
+
 // --- convenience used by actions -------------------------------------------
 
 /**

@@ -60,6 +60,9 @@ import {
   trimClipEnd as trimClipEndEdit,
   trimClipStart as trimClipStartEdit,
   updateEffect as updateEffectEdit,
+  moveEffect as moveEffectEdit,
+  trimEffectStart as trimEffectStartEdit,
+  trimEffectEnd as trimEffectEndEdit,
 } from '../core/edits';
 import { computeDuration } from '../core/selectors';
 import { importFile, disposeUnusedMedia } from '../media/registry';
@@ -139,6 +142,10 @@ export interface EditorState {
   applyMove: (baseline: Project, id: ClipId, startFrame: Frames) => void;
   applyTrimStart: (baseline: Project, id: ClipId, startFrame: Frames) => void;
   applyTrimEnd: (baseline: Project, id: ClipId, endFrame: Frames) => void;
+  // same lifecycle, but dragging an overlay block on its timeline lane
+  applyEffectMove: (baseline: Project, id: EffectId, startFrame: Frames) => void;
+  applyEffectTrimStart: (baseline: Project, id: EffectId, startFrame: Frames) => void;
+  applyEffectTrimEnd: (baseline: Project, id: EffectId, endFrame: Frames) => void;
 
   // effects (text + captions)
   addTextEffect: () => void;
@@ -375,6 +382,12 @@ export const useEditor = create<EditorState>((set, get) => {
       set({ project: trimClipStartEdit(baseline, id, startFrame) }),
     applyTrimEnd: (baseline, id, endFrame) =>
       set({ project: trimClipEndEdit(baseline, id, endFrame) }),
+    applyEffectMove: (baseline, id, startFrame) =>
+      set({ project: moveEffectEdit(baseline, id, startFrame) }),
+    applyEffectTrimStart: (baseline, id, startFrame) =>
+      set({ project: trimEffectStartEdit(baseline, id, startFrame) }),
+    applyEffectTrimEnd: (baseline, id, endFrame) =>
+      set({ project: trimEffectEndEdit(baseline, id, endFrame) }),
 
     addTextEffect: () => {
       const { project, playhead } = get();

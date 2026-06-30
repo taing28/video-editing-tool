@@ -198,8 +198,21 @@ export interface ShapeEffect extends BaseEffect {
   opacity: number;
 }
 
+export interface ImageEffect extends BaseEffect {
+  type: 'image';
+  /** The image media asset drawn by this overlay (e.g. a character cut-out). */
+  mediaId: MediaId;
+  /** Destination box in project pixels. */
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** 0..1 */
+  opacity: number;
+}
+
 /** Union of all effect variants. Extend this as new effect types are added. */
-export type Effect = TextEffect | CaptionEffect | ShapeEffect;
+export type Effect = TextEffect | CaptionEffect | ShapeEffect | ImageEffect;
 
 // ---------------------------------------------------------------------------
 // Tracks & Project

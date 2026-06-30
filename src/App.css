@@ -936,6 +936,46 @@
   background: rgba(31, 157, 114, 0.14);
 }
 
+/* Overlay lanes — one compact row per timed overlay (text/caption/shape/image). */
+.lane--overlay {
+  height: 30px;
+}
+.lane--overlay .lane__name {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+}
+.lane--overlay.is-active .lane__name {
+  color: #fff;
+}
+.lane__ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 14px;
+  padding: 0 3px;
+  margin-right: 5px;
+  border-radius: 3px;
+  background: var(--accent-2);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+.clip--overlay {
+  background: var(--accent-2);
+}
+.clip--ov-caption {
+  background: #5a6acb;
+}
+.clip--ov-shape {
+  background: #8a5bd0;
+}
+.clip--ov-image {
+  background: #b0529e;
+}
+
 .clip {
   position: absolute;
   top: 6px;
