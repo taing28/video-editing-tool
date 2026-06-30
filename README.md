@@ -14,7 +14,7 @@ npm run verify     # typecheck + unit tests + browser e2e + export test (full ga
 npm run build      # typecheck + production build
 ```
 
-## What works today (Phases 0–9)
+## What works today (Phases 0–16)
 
 - Import images / audio / **video** (Import button, or drop files on the sidebar).
 - Drag a media card onto a track (or double-click to add).
@@ -37,6 +37,9 @@ npm run build      # typecheck + production build
   button) and the later clip transitions in with a **dissolve, wipe, or slide** style.
 - **Ken Burns** — animated **pan / zoom** on a clip (zoom in/out, pan left/right) over its
   duration; frozen while you're editing the clip so you can still position it.
+- **Color grading** — per-image **brightness / contrast / saturation** sliders (plus B&W and
+  Vivid presets). Preview and the exported file are pixel-identical — both draw the same
+  cached, CSS-filtered canvas.
 - **Snapping** — dragging a clip snaps its edges to other clips' edges, the playhead, and 0
   (toggle in the timeline toolbar).
 - **Filmstrip thumbnails** on timeline clips (video frames sampled; images tiled) instead of
@@ -134,7 +137,9 @@ src/
 - ~~**Phase 13 — Transition styles**~~ ✅ done: dissolve / wipe / slide.
 - ~~**Phase 14 — Ken Burns**~~ ✅ done: animated pan/zoom on clips.
 - ~~**Phase 15 — Audio ducking**~~ ✅ done: auto-lower music under voice.
-- **Phase 16 — More:** platform export presets, stickers, color adjustments.
+- ~~**Phase 16 — Color adjustments**~~ ✅ done: per-image brightness/contrast/saturation, with
+  preview/export parity via one shared cached filtered canvas.
+- **Next — More:** platform export presets, stickers, color grading for video clips.
 - **Later — Scale:** move render+encode into a Web Worker (note: `OfflineAudioContext` +
   `<video>` seeking are main-thread-only, so this mainly helps pure image+audio projects).
 - Optional: wrap in Electron + mediabunny's server backend for native-speed export.

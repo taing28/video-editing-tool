@@ -32,6 +32,7 @@ function setup(transition: TransitionType) {
     transform: { x: 0, y: 0, width: 100, height: 100, opacity: 1 },
     transition: 'dissolve' as TransitionType,
     motion: 'none' as const,
+    adjust: { brightness: 1, contrast: 1, saturate: 1 },
   };
   const a: VideoClip = { ...base, id: newClipId(), startFrame: 0 };
   const bId = newClipId();
@@ -93,6 +94,7 @@ describe('buildScene Ken Burns', () => {
       transform: { x: 0, y: 0, width: 100, height: 100, opacity: 1 },
       transition: 'dissolve',
       motion,
+      adjust: { brightness: 1, contrast: 1, saturate: 1 },
     };
     return { p: insertClip(p, clip), id };
   }
@@ -108,5 +110,24 @@ describe('buildScene Ken Burns', () => {
   it('freezes motion for the clip being edited', () => {
     const { p, id } = single('zoomIn');
     expect(w(p, 29, id)).toBeCloseTo(100); // base box, no zoom
+  });
+});
+
+describe('buildScene color adjust', () => {
+  it('omits adjust when neutral and emits it when graded', () => {
+    const { p, bId } = setup('dissolve');
+    expect(bImage(p, 60, bId)?.adjust).toBeUndefined(); // b active (40..89), neutral
+
+    const graded = {
+      ...p,
+      clips: {
+        ...p.clips,
+        [bId]: {
+          ...(p.clips[bId] as VideoClip),
+          adjust: { brightness: 1.5, contrast: 1, saturate: 1 },
+        },
+      },
+    };
+    expect(bImage(graded, 60, bId)?.adjust?.brightness).toBe(1.5);
   });
 });

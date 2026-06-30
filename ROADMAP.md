@@ -17,7 +17,7 @@ npm run verify   # FULL gate: typecheck + unit + e2e + export + video + persist
 Architecture overview + file map: see `README.md`. Tests live in `scripts/` (Playwright)
 and `src/**/*.test.ts` (Vitest).
 
-## Status: Phase 9 complete ✅ — `npm run verify` green (24 unit + e2e + export + video + persist)
+## Status: Phase 16 complete ✅ — `npm run verify` green (44 unit + e2e + export + video + persist)
 
 ## Phases done
 
@@ -60,13 +60,18 @@ and `src/**/*.test.ts` (Vitest).
   audio plays. `voiceIntervals` (selectors) + `computeDuckRamps`/`scheduleDuck` (`src/playback/duck.ts`)
   applied in the preview engine + export mixdown.
 
+- [x] **16 — Color adjustments** — per-image-clip brightness / contrast / saturation (+ B&W /
+  Vivid presets). Parity by construction: both preview AND export resolve the SAME cached,
+  CSS-filtered canvas via `getFilteredCanvas` (`src/render/colorFilter.ts`), so the graded pixels
+  are identical. `ColorAdjust` on `VideoClip`; e2e proves the grade changes preview luminance.
+
 ## Phases planned (pick any — not strictly ordered)
 
 - [ ] **Export presets** — one-click TikTok / YouTube / Square (set aspect + resolution).
 - [ ] **Stickers** — image/emoji overlays (reuse the shape interaction + an image source).
-- [ ] **Color adjustments** — brightness/contrast/saturation (note: Konva-vs-Canvas2D filter
-  parity needs care — match the math, or render export via the same filter string).
-- [ ] **14 — Export presets** — one-click TikTok / Reels / YouTube / Square (sets aspect +
+- [ ] **Color for video clips** — extend Phase 16 grading to video (per-frame filtered canvas in
+  the preview redraw loop; export already filters per frame via the same path).
+- [ ] **Export presets (full)** — one-click TikTok / Reels / YouTube / Square (sets aspect +
   resolution together).
 - [ ] **15 — Scale** — move render+encode into a Web Worker. NOTE: `OfflineAudioContext`
   (audio mix) and `<video>` seeking (frame-accurate video) are main-thread-only, so a worker

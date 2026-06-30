@@ -34,11 +34,14 @@ export async function restoreAndStartAutosave(): Promise<void> {
           transition?: string;
           motion?: string;
           duck?: boolean;
+          adjust?: { brightness: number; contrast: number; saturate: number };
           kind?: string;
         };
         if (typeof c.speed !== 'number') c.speed = 1;
         if (c.kind !== 'audio' && c.transition === undefined) c.transition = 'dissolve';
         if (c.kind !== 'audio' && c.motion === undefined) c.motion = 'none';
+        if (c.kind !== 'audio' && c.adjust === undefined)
+          c.adjust = { brightness: 1, contrast: 1, saturate: 1 };
         if (c.kind === 'audio' && typeof c.duck !== 'boolean') c.duck = false;
       }
       // Rebuild runtime media (drawables / decoded elements) from saved blobs,

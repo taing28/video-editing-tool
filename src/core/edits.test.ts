@@ -52,6 +52,7 @@ function setup() {
     transform: { x: 0, y: 0, width: 1920, height: 1080, opacity: 1 },
     transition: 'dissolve',
     motion: 'none',
+    adjust: { brightness: 1, contrast: 1, saturate: 1 },
   };
   p = insertClip(p, clip);
   return { p, clipId, videoTrackId, mediaId };

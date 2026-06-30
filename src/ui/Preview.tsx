@@ -32,8 +32,19 @@ import {
   type ShapeLayer,
 } from '../render/scene';
 import { resolveMedia, getVideoElement } from '../media/registry';
+import { getFilteredCanvas } from '../render/colorFilter';
 import { getActiveVideoClips, sourceFrameAt } from '../core/selectors';
 import type { ClipId, EffectId } from '../core/ids';
+
+/**
+ * Resolve the drawable for an image layer, applying color grading via the
+ * SAME cached function the export uses — so the preview matches the file.
+ */
+function drawableFor(layer: ImageLayer): CanvasImageSource {
+  return layer.adjust
+    ? getFilteredCanvas(layer.clipId, layer.drawable, layer.width, layer.height, layer.adjust)
+    : layer.drawable;
+}
 
 export function Preview() {
   const project = useEditor((s) => s.project);
@@ -192,7 +203,7 @@ export function Preview() {
                     clipHeight={t?.type === 'wipe' ? layer.height : undefined}
                   >
                     <KonvaImage
-                      image={layer.drawable as CanvasImageSource as HTMLImageElement}
+                      image={drawableFor(layer) as CanvasImageSource as HTMLImageElement}
                       x={layer.x + slideDx}
                       y={layer.y}
                       width={layer.width}
@@ -244,7 +255,7 @@ export function Preview() {
               {selImage && (
                 <KonvaImage
                   ref={imageRef}
-                  image={selImage.drawable as CanvasImageSource as HTMLImageElement}
+                  image={drawableFor(selImage) as CanvasImageSource as HTMLImageElement}
                   x={selImage.x * scale}
                   y={selImage.y * scale}
                   width={selImage.width * scale}

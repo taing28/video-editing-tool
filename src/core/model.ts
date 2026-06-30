@@ -71,6 +71,13 @@ export type TransitionType = 'dissolve' | 'wipe' | 'slide';
 /** Ken Burns pan/zoom motion applied over a clip's duration. */
 export type KenBurns = 'none' | 'zoomIn' | 'zoomOut' | 'panLeft' | 'panRight';
 
+/** Color grading (CSS-filter multipliers; 1 = unchanged). */
+export interface ColorAdjust {
+  brightness: number;
+  contrast: number;
+  saturate: number;
+}
+
 export interface VideoClip extends BaseClip {
   kind: 'image' | 'video';
   /** Destination box (project pixels) + opacity; set to a contained box on add. */
@@ -79,6 +86,8 @@ export interface VideoClip extends BaseClip {
   transition: TransitionType;
   /** Animated pan/zoom over the clip's duration. */
   motion: KenBurns;
+  /** Color grading (applied to image clips). */
+  adjust: ColorAdjust;
 }
 
 export interface AudioClip extends BaseClip {

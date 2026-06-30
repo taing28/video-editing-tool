@@ -7,6 +7,7 @@
  * frame. Preview and export agree because they both consume `buildScene`.
  */
 import type { Scene } from './scene';
+import { getFilteredCanvas } from './colorFilter';
 
 export function paintScene(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -19,18 +20,23 @@ export function paintScene(
   for (const layer of scene.layers) {
     if (layer.kind === 'image') {
       ctx.globalAlpha = layer.opacity;
+      // Resolve a graded canvas (or the raw drawable for a neutral adjust). The
+      // SAME function backs the preview, so export pixels match the preview.
+      const src = layer.adjust
+        ? getFilteredCanvas(layer.clipId, layer.drawable, layer.width, layer.height, layer.adjust)
+        : layer.drawable;
       if (layer.transition?.type === 'wipe') {
         ctx.save();
         ctx.beginPath();
         ctx.rect(layer.x, layer.y, layer.width * layer.transition.progress, layer.height);
         ctx.clip();
-        ctx.drawImage(layer.drawable, layer.x, layer.y, layer.width, layer.height);
+        ctx.drawImage(src, layer.x, layer.y, layer.width, layer.height);
         ctx.restore();
       } else if (layer.transition?.type === 'slide') {
         const dx = (1 - layer.transition.progress) * layer.width;
-        ctx.drawImage(layer.drawable, layer.x + dx, layer.y, layer.width, layer.height);
+        ctx.drawImage(src, layer.x + dx, layer.y, layer.width, layer.height);
       } else {
-        ctx.drawImage(layer.drawable, layer.x, layer.y, layer.width, layer.height);
+        ctx.drawImage(src, layer.x, layer.y, layer.width, layer.height);
       }
       ctx.globalAlpha = 1;
     } else if (layer.kind === 'text') {

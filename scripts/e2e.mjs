@@ -59,6 +59,27 @@ async function dragBy(page, sel, dx, dy) {
   await page.mouse.up();
 }
 
+// Total RGB across all preview canvases (a selected clip paints on the
+// interaction layer, so sum every layer canvas).
+const previewLum = (page) =>
+  page.evaluate(() => {
+    let sum = 0;
+    for (const c of document.querySelectorAll('.preview canvas')) {
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      if (!ctx) continue;
+      const { data } = ctx.getImageData(0, 0, c.width, c.height);
+      for (let i = 0; i < data.length; i += 4) sum += data[i] + data[i + 1] + data[i + 2];
+    }
+    return sum;
+  });
+
+const setBrightness = (page, v) =>
+  page.locator('.inspector__sub input[type=range]').first().evaluate((el, val) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    setter.call(el, val);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }, v);
+
 async function dragFromTo(page, fromSel, toSel) {
   const from = await page.locator(fromSel).boundingBox();
   const to = await page.locator(toSel).boundingBox();
@@ -98,8 +119,24 @@ try {
   const w1 = await page.$eval('.lane--video .clip', (el) => el.getBoundingClientRect().width);
   assert(w1 > 0, `clip has width (${Math.round(w1)}px)`);
 
+  log('STEP 3a — color grading actually changes preview pixels');
+  // Clean state: one full-frame image, opacity 1. Grade up → brighter; down → darker.
+  await page.waitForSelector('.inspector__sub');
+  const lumBase = await previewLum(page);
+  await setBrightness(page, '1.5');
+  await page.waitForTimeout(140); // Konva redraws on the new filtered-canvas image
+  const lumUp = await previewLum(page);
+  assert(lumUp > lumBase * 1.05, `brightness 1.5 brightens preview (${lumBase} -> ${lumUp})`);
+  await setBrightness(page, '0.5');
+  await page.waitForTimeout(140);
+  const lumDown = await previewLum(page);
+  assert(lumDown < lumBase * 0.95, `brightness 0.5 darkens preview (${lumBase} -> ${lumDown})`);
+  await setBrightness(page, '1'); // reset so later visual steps are unaffected
+  await page.waitForTimeout(80);
+
   log('STEP 3b — clip opacity via inspector');
-  await page.locator('.inspector input[type=range]').evaluate((el) => {
+  // First range = Opacity (the color-grading sliders live under .inspector__sub).
+  await page.locator('.inspector input[type=range]').first().evaluate((el) => {
     // React tracks input values; use the native setter so onChange fires.
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
     setter.call(el, '0.5');
@@ -396,6 +433,34 @@ try {
     })) === 'zoomIn',
     'Ken Burns motion set to zoom in',
   );
+
+  log('STEP 14b — color grading (image clip): brightness slider + B&W preset');
+  // The 2nd video clip (an image) is still selected from STEP 14.
+  await page.waitForSelector('.inspector__sub'); // the Color section
+  await page.locator('.inspector__sub input[type=range]').first().evaluate((el) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    setter.call(el, '1.5');
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  assert(
+    Math.abs(
+      (await page.evaluate(() => {
+        const ed = window.__editor.getState();
+        return ed.project.clips[ed.selectedClipId].adjust.brightness;
+      })) - 1.5,
+    ) < 0.06,
+    'brightness set via inspector slider',
+  );
+  await page.click('.inspector__sub button:has-text("B&W")');
+  assert(
+    (await page.evaluate(() => {
+      const ed = window.__editor.getState();
+      return ed.project.clips[ed.selectedClipId].adjust.saturate;
+    })) === 0,
+    'B&W preset zeroes saturation',
+  );
+  // The preview must render the graded clip without error (asserted globally).
+  await page.waitForTimeout(80);
 
   log('STEP 15 — filmstrip thumbnails on clips');
   await page.waitForSelector('.lane--video .clip .filmstrip__tile', { timeout: 5000 });

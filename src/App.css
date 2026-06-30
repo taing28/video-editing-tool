@@ -121,6 +121,30 @@
   justify-content: center;
   margin-bottom: 12px;
 }
+.btn--mini {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+/* grouped sub-section inside the inspector (e.g. color grading) */
+.inspector__sub {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+.inspector__subhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.inspector__sub .field:last-child {
+  margin-bottom: 0;
+}
 
 /* ---- middle row ---- */
 .app__middle {

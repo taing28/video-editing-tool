@@ -13,8 +13,9 @@
  * Because they share buildScene, text overlays and future effects appear in the
  * export with zero special-casing.
  */
-import type { Project } from '../core/model';
+import type { Project, ColorAdjust } from '../core/model';
 import type { Frames } from '../core/time';
+import { isNeutralAdjust } from './colorFilter';
 import {
   getActiveVideoClips,
   getActiveEffects,
@@ -46,6 +47,8 @@ export interface ImageLayer {
   opacity: number;
   /** Geometric transition-in across an overlap (dissolve is folded into opacity). */
   transition?: { type: 'wipe' | 'slide'; progress: number };
+  /** Color grading to apply (image clips). */
+  adjust?: ColorAdjust;
 }
 
 export interface TextLayer {
@@ -131,6 +134,8 @@ export function buildScene(
     const box = animate
       ? kenBurnsBox(clip.transform, clip.motion, into / Math.max(1, clip.durationInFrames - 1))
       : clip.transform;
+    const adjust =
+      clip.kind === 'image' && !isNeutralAdjust(clip.adjust) ? clip.adjust : undefined;
     layers.push({
       kind: 'image',
       clipId: clip.id,
@@ -141,6 +146,7 @@ export function buildScene(
       height: box.height,
       opacity,
       transition,
+      adjust,
     });
   }
 

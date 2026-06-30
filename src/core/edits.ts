@@ -368,7 +368,14 @@ export function makeClipFromMedia(
     p.width,
     p.height,
   );
-  return { ...base, kind: media.kind, transform, transition: 'dissolve', motion: 'none' };
+  return {
+    ...base,
+    kind: media.kind,
+    transform,
+    transition: 'dissolve',
+    motion: 'none',
+    adjust: { brightness: 1, contrast: 1, saturate: 1 },
+  };
 }
 
 /** Set a video/image clip's transition-in style. */
@@ -387,6 +394,20 @@ export function setClipMotion(p: Project, clipId: ClipId, motion: VideoClip['mot
   const clip = p.clips[clipId];
   if (!clip || clip.kind === 'audio') return p;
   return { ...p, clips: { ...p.clips, [clipId]: { ...clip, motion } } };
+}
+
+/** Patch a clip's color adjustment (brightness/contrast/saturate). */
+export function setClipAdjust(
+  p: Project,
+  clipId: ClipId,
+  patch: Partial<VideoClip['adjust']>,
+): Project {
+  const clip = p.clips[clipId];
+  if (!clip || clip.kind === 'audio') return p;
+  return {
+    ...p,
+    clips: { ...p.clips, [clipId]: { ...clip, adjust: { ...clip.adjust, ...patch } } },
+  };
 }
 
 /** True if a media asset can be dropped onto a track of the given kind. */

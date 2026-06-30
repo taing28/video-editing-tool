@@ -98,6 +98,7 @@ function ClipEditor() {
   const setClipSpeed = useEditor((s) => s.setClipSpeed);
   const setClipTransition = useEditor((s) => s.setClipTransition);
   const setClipMotion = useEditor((s) => s.setClipMotion);
+  const setClipAdjust = useEditor((s) => s.setClipAdjust);
   const addTransition = useEditor((s) => s.addTransition);
   if (!clip) return null;
 
@@ -194,6 +195,70 @@ function ClipEditor() {
             />
           </label>
         </>
+      )}
+      {clip.kind === 'image' && (
+        <div className="inspector__sub">
+          <div className="inspector__subhead">
+            <span>Color</span>
+            <button
+              className="btn btn--mini"
+              onClick={() =>
+                setClipAdjust(clip.id, { brightness: 1, contrast: 1, saturate: 1 })
+              }
+            >
+              Reset
+            </button>
+          </div>
+          <label className="field">
+            <span>Brightness ({Math.round(clip.adjust.brightness * 100)}%)</span>
+            <input
+              type="range"
+              min={0}
+              max={2}
+              step={0.05}
+              value={clip.adjust.brightness}
+              onChange={(e) => setClipAdjust(clip.id, { brightness: Number(e.target.value) })}
+            />
+          </label>
+          <label className="field">
+            <span>Contrast ({Math.round(clip.adjust.contrast * 100)}%)</span>
+            <input
+              type="range"
+              min={0}
+              max={2}
+              step={0.05}
+              value={clip.adjust.contrast}
+              onChange={(e) => setClipAdjust(clip.id, { contrast: Number(e.target.value) })}
+            />
+          </label>
+          <label className="field">
+            <span>Saturation ({Math.round(clip.adjust.saturate * 100)}%)</span>
+            <input
+              type="range"
+              min={0}
+              max={2}
+              step={0.05}
+              value={clip.adjust.saturate}
+              onChange={(e) => setClipAdjust(clip.id, { saturate: Number(e.target.value) })}
+            />
+          </label>
+          <div className="field-row">
+            <button
+              className="btn btn--mini"
+              onClick={() => setClipAdjust(clip.id, { saturate: 0 })}
+            >
+              B&amp;W
+            </button>
+            <button
+              className="btn btn--mini"
+              onClick={() =>
+                setClipAdjust(clip.id, { saturate: 1.4, contrast: 1.15, brightness: 1.05 })
+              }
+            >
+              Vivid
+            </button>
+          </div>
+        </div>
       )}
       {clip.kind === 'audio' && (
         <>
