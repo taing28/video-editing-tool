@@ -173,9 +173,12 @@ export function Preview() {
     if (regradeDynamic(scene) > 0) stageRef.current?.batchDraw();
   }, [scene]);
 
+  // Fit the stage inside the box with a small breathing margin (and so it never
+  // touches/overflows the edges into the timeline).
+  const FIT = 0.96;
   const scale =
     box.width > 0 && box.height > 0
-      ? Math.min(box.width / scene.width, box.height / scene.height)
+      ? Math.min(box.width / scene.width, box.height / scene.height) * FIT
       : 0;
   const stageW = Math.max(1, Math.floor(scene.width * scale));
   const stageH = Math.max(1, Math.floor(scene.height * scale));

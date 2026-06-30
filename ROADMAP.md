@@ -26,6 +26,10 @@ and `src/**/*.test.ts` (Vitest).
 - **No scrollbars / theme fixes** — hid native scrollbars app-wide (index.css); inspector inputs
   now `width:100%` and `.field-row` wraps, so the panel never overflows horizontally (kills the
   stray white scrollbar). The "black preview" users hit is a hidden Video track (the 🚫/👁 toggle).
+- **Preview overflow** — the stage spilled into the timeline because the middle grid row was
+  `1fr` (= `minmax(auto,1fr)`, grows to content) and the scale used the padding-box height. Fixed:
+  `grid-template-rows: … minmax(0,1fr) …`, `.preview { overflow:hidden; min-height:0; padding:0 }`,
+  and a 0.96 fit factor on the stage scale. Collapse toggle is now a taller, centered edge tab.
 
 ### Hardening pass (adversarial review of Phases 16–21)
 - **Media leak on project replace** — `loadProject`/`newProject` swapped the document but never

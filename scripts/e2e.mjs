@@ -119,8 +119,16 @@ try {
   await page.click('.sidebar--right .sidebar__toggle');
   await page.waitForTimeout(320);
   assert((await rightWidth()) > 100, 'toggle re-expands the sidebar');
-  // Drag the resize handle to widen the right sidebar (drag left = wider).
-  await dragBy(page, '.sidebar--right .sidebar__resize', -60, 0);
+  // Drag the resize handle to widen the right sidebar (drag left = wider). Grab
+  // it below the centered collapse tab so the drag lands on the handle.
+  const rh = await page.locator('.sidebar--right .sidebar__resize').boundingBox();
+  const gx = rh.x + rh.width / 2;
+  const gy = rh.y + rh.height * 0.85;
+  await page.mouse.move(gx, gy);
+  await page.mouse.down();
+  await page.mouse.move(gx - 8, gy);
+  await page.mouse.move(gx - 60, gy, { steps: 8 });
+  await page.mouse.up();
   assert(
     (await rightWidth()) > wOpen + 30,
     `resize handle widens the sidebar (${Math.round(wOpen)} -> ${Math.round(await rightWidth())})`,
