@@ -17,7 +17,7 @@ npm run verify   # FULL gate: typecheck + unit + e2e + export + video + persist
 Architecture overview + file map: see `README.md`. Tests live in `scripts/` (Playwright)
 and `src/**/*.test.ts` (Vitest).
 
-## Status: Phase 17 complete ✅ — `npm run verify` green (46 unit + e2e + export + video + persist)
+## Status: Phase 18 complete ✅ — `npm run verify` green (48 unit + e2e + export + video + persist)
 
 ## Phases done
 
@@ -69,6 +69,12 @@ and `src/**/*.test.ts` (Vitest).
   contain (letterbox), cover (crop to fill — the reels reframe for landscape media in a vertical
   canvas), or stretch. Reuses the transform box (overflow clips to the canvas in both renderers)
   → zero new rendering. `coverBox` (`model.ts`) + `fitClip` (`edits.ts`); inspector buttons.
+
+- [x] **18 — Overlay fade in/out** — text / caption / shape overlays ramp opacity in and out
+  instead of popping. Optional `fadeInFrames`/`fadeOutFrames` on `BaseEffect`; `effectOpacity`
+  (selectors) reuses `fadeEnvelope`; folded into each overlay layer's opacity (parity: Konva
+  `opacity` prop = export `globalAlpha`). Shared `OverlayFadeFields` inspector control; a selected
+  overlay edits at its base opacity (ignores the fade), like a selected clip ignores its transition.
 
 ## Phases planned (pick any — not strictly ordered)
 

@@ -17,11 +17,12 @@ import {
 import {
   getTrackClips,
   fadeMultiplier,
+  effectOpacity,
   overlapWithPrev,
   sourceFrameAt,
   voiceIntervals,
 } from './selectors';
-import type { AudioClip } from './model';
+import type { AudioClip, Effect } from './model';
 
 function setup() {
   let p = createEmptyProject({ fps: 30 });
@@ -254,5 +255,24 @@ describe('coverBox / fitClip (object-fit)', () => {
     const stretched = fitClip(p, id, 'stretch').clips[id];
     const st = stretched.kind !== 'audio' ? stretched.transform : null;
     expect(st).toEqual({ x: 0, y: 0, width: 1080, height: 1920, opacity: 0.4 });
+  });
+});
+
+describe('effectOpacity (overlay fades)', () => {
+  const eff = (fadeInFrames?: number, fadeOutFrames?: number) =>
+    ({ timing: { start: 100, duration: 100 }, fadeInFrames, fadeOutFrames }) as unknown as Effect;
+
+  it('is fully opaque when no fade is set', () => {
+    expect(effectOpacity(eff(), 100)).toBe(1);
+    expect(effectOpacity(eff(), 150)).toBe(1);
+    expect(effectOpacity(eff(), 199)).toBe(1);
+  });
+
+  it('ramps in at the start and out at the end of the timing range', () => {
+    const e = eff(10, 10); // frames 100..199
+    expect(effectOpacity(e, 100)).toBeCloseTo(0); // very start
+    expect(effectOpacity(e, 105)).toBeCloseTo(0.5);
+    expect(effectOpacity(e, 150)).toBeCloseTo(1); // middle
+    expect(effectOpacity(e, 195)).toBeCloseTo(0.5); // fading out
   });
 });

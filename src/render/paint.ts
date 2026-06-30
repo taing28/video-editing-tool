@@ -41,6 +41,7 @@ export function paintScene(
       ctx.globalAlpha = 1;
     } else if (layer.kind === 'text') {
       // Free-positioned, top-left anchored at (x, y) — mirrors the preview.
+      ctx.globalAlpha = layer.opacity;
       ctx.fillStyle = layer.color;
       ctx.font = `${layer.fontWeight} ${layer.fontSize}px ${layer.fontFamily}`;
       ctx.textAlign = 'left';
@@ -49,6 +50,7 @@ export function paintScene(
       layer.text.split('\n').forEach((line, i) => {
         ctx.fillText(line, layer.x, layer.y + i * lineHeight);
       });
+      ctx.globalAlpha = 1;
     } else if (layer.kind === 'shape') {
       ctx.globalAlpha = layer.opacity;
       ctx.fillStyle = layer.color;
@@ -56,6 +58,7 @@ export function paintScene(
       ctx.globalAlpha = 1;
     } else {
       // Caption: centered, bottom-anchored, outlined for readability.
+      ctx.globalAlpha = layer.opacity;
       const lineHeight = layer.fontSize * 1.2;
       const margin = layer.fontSize;
       const y0 = scene.height - layer.lines.length * lineHeight - margin;
@@ -72,6 +75,7 @@ export function paintScene(
         ctx.strokeText(line, cx, y);
         ctx.fillText(line, cx, y);
       });
+      ctx.globalAlpha = 1;
     }
   }
 }

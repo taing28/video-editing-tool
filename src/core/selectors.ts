@@ -116,6 +116,17 @@ export function fadeMultiplier(clip: Clip, frame: Frames): number {
   );
 }
 
+/** Opacity envelope (0..1) for a timed overlay, from its own fadeIn/fadeOut. */
+export function effectOpacity(effect: Effect, frame: Frames): number {
+  return fadeEnvelope(
+    frame,
+    effect.timing.start,
+    effect.timing.duration,
+    effect.fadeInFrames ?? 0,
+    effect.fadeOutFrames ?? 0,
+  );
+}
+
 /**
  * How many frames a clip overlaps the previous clip on its track. A positive
  * overlap on a video track is rendered as a cross-dissolve (this clip fades in

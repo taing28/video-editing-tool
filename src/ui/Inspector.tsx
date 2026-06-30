@@ -15,6 +15,51 @@ import {
 } from '../store/editorStore';
 import { framesToSeconds, secondsToFrames } from '../core/time';
 import type { TransitionType, KenBurns } from '../core/model';
+import type { EffectId } from '../core/ids';
+
+/** Fade in/out (seconds) for a timed overlay — shared by text/caption/shape. */
+function OverlayFadeFields({
+  effectId,
+  fadeInFrames,
+  fadeOutFrames,
+  fps,
+  update,
+}: {
+  effectId: EffectId;
+  fadeInFrames?: number;
+  fadeOutFrames?: number;
+  fps: number;
+  update: (id: EffectId, patch: { fadeInFrames?: number; fadeOutFrames?: number }) => void;
+}) {
+  return (
+    <div className="field-row">
+      <label className="field">
+        <span>Fade in (s)</span>
+        <input
+          type="number"
+          min={0}
+          step={0.1}
+          value={framesToSeconds(fadeInFrames ?? 0, fps).toFixed(1)}
+          onChange={(e) =>
+            update(effectId, { fadeInFrames: secondsToFrames(Number(e.target.value), fps) })
+          }
+        />
+      </label>
+      <label className="field">
+        <span>Fade out (s)</span>
+        <input
+          type="number"
+          min={0}
+          step={0.1}
+          value={framesToSeconds(fadeOutFrames ?? 0, fps).toFixed(1)}
+          onChange={(e) =>
+            update(effectId, { fadeOutFrames: secondsToFrames(Number(e.target.value), fps) })
+          }
+        />
+      </label>
+    </div>
+  );
+}
 
 function TextEffectEditor() {
   const effect = useSelectedTextEffect();
@@ -83,6 +128,13 @@ function TextEffectEditor() {
           }
         />
       </label>
+      <OverlayFadeFields
+        effectId={effect.id}
+        fadeInFrames={effect.fadeInFrames}
+        fadeOutFrames={effect.fadeOutFrames}
+        fps={project.fps}
+        update={update}
+      />
     </div>
   );
 }
@@ -379,6 +431,13 @@ function CaptionEditor() {
           }
         />
       </label>
+      <OverlayFadeFields
+        effectId={caption.id}
+        fadeInFrames={caption.fadeInFrames}
+        fadeOutFrames={caption.fadeOutFrames}
+        fps={project.fps}
+        update={update}
+      />
       <p className="inspector__hint">
         Captions appear centered near the bottom with an outline for readability.
       </p>
@@ -431,6 +490,13 @@ function ShapeEditor() {
           }
         />
       </label>
+      <OverlayFadeFields
+        effectId={shape.id}
+        fadeInFrames={shape.fadeInFrames}
+        fadeOutFrames={shape.fadeOutFrames}
+        fps={project.fps}
+        update={update}
+      />
       <p className="inspector__hint">Drag on the preview to move; drag a corner to resize.</p>
     </div>
   );

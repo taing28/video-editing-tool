@@ -254,6 +254,24 @@ try {
   });
   assert(afterX > beforeX + 5, `text moved right after drag (${beforeX} -> ${afterX})`);
 
+  log('STEP 8c — overlay fade in/out (text overlay still selected)');
+  // The text editor's fade fields live in the OverlayFadeFields row.
+  await page
+    .locator('.inspector label:has(span:text-is("Fade in (s)")) input')
+    .evaluate((el) => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+      setter.call(el, '0.5');
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  const fadeInFrames = await page.evaluate(() => {
+    const ed = window.__editor.getState();
+    return ed.project.effects[ed.selectedEffectId].fadeInFrames;
+  });
+  assert(
+    fadeInFrames >= 12 && fadeInFrames <= 18,
+    `text overlay fade-in ~15f stored (${fadeInFrames})`,
+  );
+
   log('STEP 9 — scrub moves playhead');
   const tc0 = await page.textContent('.toolbar__time');
   await page.click('.ruler', { position: { x: 200, y: 12 } });

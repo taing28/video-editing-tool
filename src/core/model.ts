@@ -159,6 +159,10 @@ export interface BaseEffect {
   type: string;
   /** When the effect is active, in timeline frames — independent of any clip. */
   timing: FrameRange;
+  /** Opacity ramp-in over this many frames at the start of `timing` (0 = none). */
+  fadeInFrames?: Frames;
+  /** Opacity ramp-out over this many frames at the end of `timing` (0 = none). */
+  fadeOutFrames?: Frames;
 }
 
 export interface TextEffect extends BaseEffect {

@@ -152,6 +152,11 @@ export function Preview() {
   const selShape = scene.layers.find(
     (l): l is ShapeLayer => l.kind === 'shape' && l.effectId === selectedEffectId,
   );
+  // Base (un-faded) opacity of the selected shape, read from the document so the
+  // node stays at full editing weight even when scrubbed into its fade.
+  const selShapeEffect = selShape ? project.effects[selShape.effectId] : undefined;
+  const selShapeBaseOpacity =
+    selShapeEffect && selShapeEffect.type === 'shape' ? selShapeEffect.opacity : selShape?.opacity;
 
   // Attach the transformer to whichever node is selected.
   useEffect(() => {
@@ -224,6 +229,7 @@ export function Preview() {
                     fontFamily={layer.fontFamily}
                     fontStyle={weightToFontStyle(layer.fontWeight)}
                     fill={layer.color}
+                    opacity={layer.opacity}
                   />
                 );
               }
@@ -244,6 +250,7 @@ export function Preview() {
                   stroke="rgba(0,0,0,0.85)"
                   strokeWidth={Math.max(2, layer.fontSize * 0.12)}
                   fillAfterStrokeEnabled
+                  opacity={layer.opacity}
                 />
               );
             })}
@@ -327,7 +334,9 @@ export function Preview() {
                   width={selShape.width * scale}
                   height={selShape.height * scale}
                   fill={selShape.color}
-                  opacity={selShape.opacity}
+                  // Edit at the shape's base opacity (ignore the fade envelope),
+                  // mirroring how a selected clip ignores its transition.
+                  opacity={selShapeBaseOpacity}
                   draggable
                   onDragEnd={(e) => {
                     const n = e.target;

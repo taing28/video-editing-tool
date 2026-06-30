@@ -20,6 +20,7 @@ import {
   getActiveVideoClips,
   getActiveEffects,
   fadeEnvelope,
+  effectOpacity,
   overlapWithPrev,
 } from '../core/selectors';
 import { kenBurnsBox } from './kenburns';
@@ -62,6 +63,8 @@ export interface TextLayer {
   fontFamily: string;
   color: string;
   align: 'left' | 'center' | 'right';
+  /** 0..1 fade envelope from the effect's fadeIn/fadeOut. */
+  opacity: number;
 }
 
 export interface CaptionLayer {
@@ -72,6 +75,8 @@ export interface CaptionLayer {
   fontSize: number;
   fontFamily: string;
   color: string;
+  /** 0..1 fade envelope from the effect's fadeIn/fadeOut. */
+  opacity: number;
 }
 
 export interface ShapeLayer {
@@ -150,8 +155,9 @@ export function buildScene(
     });
   }
 
-  // Timed overlays on top.
+  // Timed overlays on top. Each carries a fade envelope (0..1) folded into opacity.
   for (const effect of getActiveEffects(project, frame)) {
+    const fade = effectOpacity(effect, frame);
     if (effect.type === 'text') {
       layers.push({
         kind: 'text',
@@ -164,6 +170,7 @@ export function buildScene(
         fontFamily: effect.fontFamily,
         color: effect.color,
         align: effect.align,
+        opacity: fade,
       });
     } else if (effect.type === 'caption') {
       layers.push({
@@ -173,6 +180,7 @@ export function buildScene(
         fontSize: effect.fontSize,
         fontFamily: effect.fontFamily,
         color: effect.color,
+        opacity: fade,
       });
     } else if (effect.type === 'shape') {
       layers.push({
@@ -183,7 +191,7 @@ export function buildScene(
         width: effect.width,
         height: effect.height,
         color: effect.color,
-        opacity: effect.opacity,
+        opacity: effect.opacity * fade,
       });
     }
   }
