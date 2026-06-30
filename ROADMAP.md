@@ -31,6 +31,13 @@ and `src/**/*.test.ts` (Vitest).
   `grid-template-rows: … minmax(0,1fr) …`, `.preview { overflow:hidden; min-height:0; padding:0 }`,
   and a 0.96 fit factor on the stage scale. Collapse toggle is now a taller, centered edge tab.
 
+### Help & tooltips (user feedback)
+- **Hover tooltips** — one global `ui/Tooltip.tsx` driven by `data-tip` attributes; a styled
+  bubble appears ~1s after the pointer rests on a control. Added `data-tip` to the confusing
+  controls (Transition, Snap, Motion, Speed, Duck, Frame fit, toolbar buttons, …).
+- **Searchable Help** — a `?` button opens `ui/HelpDialog.tsx`: type a feature name to filter
+  `help/guide.ts` entries, each with "what it is" + "how to use it". e2e step 1c covers both.
+
 ### Hardening pass (adversarial review of Phases 16–21)
 - **Media leak on project replace** — `loadProject`/`newProject` swapped the document but never
   released the OUTGOING project's runtime media (object URLs + File blobs), so each open/new

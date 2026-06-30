@@ -14,6 +14,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { Toolbar } from './ui/Toolbar';
+import { Tooltip } from './ui/Tooltip';
 import { Sidebar } from './ui/Sidebar';
 import { MediaLibrary } from './ui/MediaLibrary';
 import { Preview } from './ui/Preview';
@@ -95,6 +96,7 @@ export default function App() {
       <ExportDialog />
       <ExportOverlay />
       <TranscribeOverlay />
+      <Tooltip />
     </DndContext>
   );
 }

@@ -5,6 +5,7 @@ import { useRef } from 'react';
 import { useEditor } from '../store/editorStore';
 import { formatTimecode } from '../core/time';
 import { checkExportSupport } from '../render/capabilities';
+import { HelpButton } from './HelpDialog';
 
 const CANVAS_PRESETS = [
   { label: '16:9 · 1920×1080', w: 1920, h: 1080 },
@@ -68,67 +69,88 @@ export function Toolbar() {
       </div>
 
       <div className="toolbar__group">
-        <button className="btn" onClick={togglePlay}>
+        <button className="btn" onClick={togglePlay} data-tip="Play / pause the preview (Space).">
           {isPlaying ? '❚❚ Pause' : '▶ Play'}
         </button>
         <span className="toolbar__time">{formatTimecode(playhead, fps)}</span>
       </div>
 
       <div className="toolbar__group">
-        <button className="btn" onClick={undo} disabled={!canUndo}>
+        <button className="btn" onClick={undo} disabled={!canUndo} data-tip="Undo the last change (⌘/Ctrl+Z).">
           ↶ Undo
         </button>
-        <button className="btn" onClick={redo} disabled={!canRedo}>
+        <button className="btn" onClick={redo} disabled={!canRedo} data-tip="Redo (⌘/Ctrl+Shift+Z).">
           ↷ Redo
         </button>
-        <button className="btn" onClick={split} disabled={!hasSelection} title="Split at playhead">
+        <button
+          className="btn"
+          onClick={split}
+          disabled={!hasSelection}
+          data-tip="Cut the selected clip in two at the playhead (S)."
+        >
           ✂ Split
         </button>
         <button
           className="btn"
           onClick={duplicate}
           disabled={!hasSelection}
-          title="Duplicate the selection (⌘/Ctrl+D)"
+          data-tip="Duplicate the selected clip or overlay (⌘/Ctrl+D)."
         >
           ⧉ Duplicate
         </button>
-        <button className="btn" onClick={remove} disabled={!hasSelection}>
+        <button
+          className="btn"
+          onClick={remove}
+          disabled={!hasSelection}
+          data-tip="Delete the selected clip or overlay (Delete)."
+        >
           🗑 Delete
         </button>
-        <button className="btn" onClick={addText}>
+        <button className="btn" onClick={addText} data-tip="Add a text title you can place anywhere on the preview.">
           T Add text
         </button>
-        <button className="btn" onClick={addCaption}>
+        <button className="btn" onClick={addCaption} data-tip="Add a centered, outlined subtitle near the bottom.">
           CC Caption
         </button>
         <button
           className="btn"
           onClick={() => void autoCaption()}
           disabled={isTranscribing}
-          title="Transcribe the audio into captions (on-device)"
+          data-tip="Transcribe the audio into captions automatically, on your device."
         >
           ✨ Auto-caption
         </button>
-        <button className="btn" onClick={addShape} title="Add a rectangle / color block">
+        <button className="btn" onClick={addShape} data-tip="Add a colored rectangle / block (background bar or highlight).">
           ▭ Shape
         </button>
-        <button className="btn" onClick={addLowerThird} title="Add a lower-third bar + text">
+        <button className="btn" onClick={addLowerThird} data-tip="Add a name bar: a colored bar with text near the bottom.">
           ▬ Lower third
         </button>
       </div>
 
       <div className="toolbar__group">
         <span className="toolbar__label">Tracks</span>
-        <button className="btn btn--sm" onClick={() => addTrack('video')} title="Add a video track">
+        <button
+          className="btn btn--sm"
+          onClick={() => addTrack('video')}
+          data-tip="Add another video row to stack clips/overlays."
+        >
           + Video
         </button>
-        <button className="btn btn--sm" onClick={() => addTrack('audio')} title="Add an audio track">
+        <button
+          className="btn btn--sm"
+          onClick={() => addTrack('audio')}
+          data-tip="Add another audio row (e.g. voice on one, music on another)."
+        >
           + Audio
         </button>
       </div>
 
       <div className="toolbar__group toolbar__group--right">
-        <label className="toolbar__label" title="Canvas size / aspect ratio">
+        <label
+          className="toolbar__label"
+          data-tip="Output shape: 16:9 landscape, 9:16 vertical (Reels/TikTok), 1:1 square."
+        >
           Canvas
           <select
             className="toolbar__select"
@@ -146,7 +168,10 @@ export function Toolbar() {
             ))}
           </select>
         </label>
-        <label className="toolbar__zoom">
+        <label
+          className="toolbar__zoom"
+          data-tip="Stretch the timeline to see more or less detail per second."
+        >
           Zoom
           <input
             type="range"
@@ -165,14 +190,14 @@ export function Toolbar() {
               window.alert('Could not save the project file.');
             });
           }}
-          title="Save the project (timeline + media) to a file you can back up or reopen"
+          data-tip="Save the whole project (timeline + media) to a file you can back up or reopen. Not a video — use Export for that."
         >
           💾 Save
         </button>
         <button
           className="btn"
           onClick={() => openInputRef.current?.click()}
-          title="Open a saved project file (replaces the current project)"
+          data-tip="Open a previously saved project file (replaces the current project)."
         >
           📂 Open
         </button>
@@ -195,10 +220,15 @@ export function Toolbar() {
           className="btn btn--primary"
           onClick={openExportDialog}
           disabled={isExporting || !support.supported}
-          title={support.reason}
+          data-tip={
+            support.supported
+              ? 'Render the final video file (MP4/WebM) with your chosen resolution and quality.'
+              : support.reason
+          }
         >
           ⬇ Export
         </button>
+        <HelpButton />
       </div>
     </header>
   );

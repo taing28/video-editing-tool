@@ -134,6 +134,26 @@ try {
     `resize handle widens the sidebar (${Math.round(wOpen)} -> ${Math.round(await rightWidth())})`,
   );
 
+  log('STEP 1c — Help panel search + hover tooltip');
+  await page.click('.help-btn');
+  await page.waitForSelector('.help-card');
+  await page.fill('.help-search', 'snap');
+  assert(
+    (await page.locator('.help-entry').filter({ hasText: 'Snapping' }).count()) >= 1,
+    'help search finds the Snapping guide entry',
+  );
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('.help-card', { state: 'detached' });
+  assert((await page.locator('.help-card').count()) === 0, 'help panel closes on Escape');
+  // Hover an enabled control → a styled tooltip appears after the ~1s delay.
+  await page.hover('button:has-text("Add text")');
+  await page.waitForSelector('.tooltip', { timeout: 3000 });
+  const tipText = (await page.textContent('.tooltip')) || '';
+  assert(/text/i.test(tipText), `tooltip appears on hover ("${tipText.slice(0, 24)}…")`);
+  await page.mouse.move(4, 4); // move away
+  await page.waitForTimeout(150);
+  assert((await page.locator('.tooltip').count()) === 0, 'tooltip hides on mouse-out');
+
   log('STEP 2 — import image + audio');
   await page.setInputFiles('.library input[type=file]', [pngPath, wavPath]);
   await page.waitForSelector('.media-card');

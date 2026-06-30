@@ -72,6 +72,8 @@ npm run build      # typecheck + production build
 - **Duplicate** a clip or overlay (⧉ button / ⌘/Ctrl+D) — repeat a configured photo or title.
 - **Collapsible, resizable side panels** — drag the inner edge to resize, click the ‹/› tab to
   slide a panel away; widths persist. Inspector fields wrap instead of overflowing; no scrollbars.
+- **Help & tooltips** — hover any control for ~1s to get a plain-language tooltip, or click the
+  **?** button for a searchable guide (what each feature is + how to use it).
 - Undo/redo, keyboard shortcuts (Space, ⌘/Ctrl+Z, ⌘/Ctrl+D to duplicate, Delete, S to split).
 
 **Not yet wired:** auto-transcription (Whisper) to fill the caption track; speed control;

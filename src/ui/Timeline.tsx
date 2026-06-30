@@ -251,7 +251,7 @@ export function Timeline() {
         <button
           className={`tl-toggle${snappingEnabled ? ' is-on' : ''}`}
           onClick={toggleSnapping}
-          title="Snapping: align clips to edges & playhead"
+          data-tip="Snapping: when ON, dragging a clip makes its edges stick to other clips, the playhead and the start — so no tiny gaps. Turn OFF for free placement."
         >
           🧲 Snap {snappingEnabled ? 'on' : 'off'}
         </button>

@@ -808,3 +808,114 @@
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* ---- hover tooltip (data-tip) ---- */
+.tooltip {
+  position: fixed;
+  z-index: 1000;
+  max-width: 280px;
+  padding: 8px 11px;
+  background: #0b0c10;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  animation: tip-in 0.12s ease both;
+}
+@keyframes tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---- help (?) ---- */
+.help-btn {
+  width: 32px;
+  padding: 6px 0;
+  font-weight: 700;
+  border-radius: 50%;
+}
+.help-card {
+  width: min(560px, 92vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+}
+.help-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.help-card__head h3 {
+  margin: 0;
+}
+.help-search {
+  margin: 14px 0 12px;
+  width: 100%;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 9px 11px;
+  font: inherit;
+}
+.help-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.help-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 4px;
+}
+.help-empty {
+  color: var(--muted);
+}
+.help-entry {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+}
+.help-entry__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.help-entry__name {
+  font-weight: 600;
+}
+.help-entry__cat {
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 8px;
+  flex: 0 0 auto;
+}
+.help-entry__what {
+  margin: 0 0 6px;
+  font-size: 12.5px;
+}
+.help-entry__how {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.help-entry__label {
+  color: var(--accent);
+  font-weight: 600;
+}

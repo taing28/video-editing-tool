@@ -170,7 +170,10 @@ function ClipEditor() {
         start {clip.startFrame}f · {clip.durationInFrames}f
       </p>
       {hasSpeed && (
-        <label className="field">
+        <label
+          className="field"
+          data-tip="Playback speed. 2× is twice as fast (and half as long on the timeline); 0.5× is slow-motion."
+        >
           <span>Speed</span>
           <select
             value={clip.speed}
@@ -200,7 +203,10 @@ function ClipEditor() {
       )}
       {(clip.kind === 'image' || clip.kind === 'video') && (
         <>
-          <label className="field">
+          <label
+            className="field"
+            data-tip="Ken Burns: a slow pan/zoom over the clip so still photos feel alive. It animates while playing + in the export."
+          >
             <span>Motion (Ken Burns)</span>
             <select
               value={clip.motion}
@@ -213,7 +219,10 @@ function ClipEditor() {
               <option value="panRight">Pan right</option>
             </select>
           </label>
-          <label className="field">
+          <label
+            className="field"
+            data-tip="How this clip blends in where it OVERLAPS the previous clip. Dissolve = cross-fade, Wipe = revealed left-to-right, Slide = slides in. Needs an overlap (use ‘Add transition’)."
+          >
             <span>Transition</span>
             <select
               value={clip.transition}
@@ -227,13 +236,20 @@ function ClipEditor() {
         </>
       )}
       {isVisual && hasPrev && (
-        <button className="btn btn--block" onClick={addTransition}>
+        <button
+          className="btn btn--block"
+          onClick={addTransition}
+          data-tip="Overlaps this clip with the one before it by ~0.5s to create a transition region, then pick a style above."
+        >
           ⇄ Add transition (overlap previous)
         </button>
       )}
       {isVisual && (
         <>
-          <label className="field">
+          <label
+            className="field"
+            data-tip="How the clip maps into the canvas. Fit = whole image with bars; Fill = crop to fill (great for a landscape photo in a vertical video); Stretch = force-fit."
+          >
             <span>Frame fit</span>
             <div className="field-row">
               <button className="btn btn--mini" onClick={() => fitClip(clip.id, 'contain')}>
@@ -340,7 +356,10 @@ function ClipEditor() {
               onChange={(e) => setClipGain(clip.id, Number(e.target.value))}
             />
           </label>
-          <label className="field-check">
+          <label
+            className="field-check"
+            data-tip="Auto-lowers THIS clip’s volume whenever other (non-ducked) audio — your voice — is playing, so narration stays clear. Use it on music."
+          >
             <input
               type="checkbox"
               checked={clip.duck}
