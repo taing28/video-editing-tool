@@ -17,7 +17,7 @@ npm run verify   # FULL gate: typecheck + unit + e2e + export + video + persist
 Architecture overview + file map: see `README.md`. Tests live in `scripts/` (Playwright)
 and `src/**/*.test.ts` (Vitest).
 
-## Status: Phase 16 complete ✅ — `npm run verify` green (44 unit + e2e + export + video + persist)
+## Status: Phase 17 complete ✅ — `npm run verify` green (46 unit + e2e + export + video + persist)
 
 ## Phases done
 
@@ -64,6 +64,11 @@ and `src/**/*.test.ts` (Vitest).
   Vivid presets). Parity by construction: both preview AND export resolve the SAME cached,
   CSS-filtered canvas via `getFilteredCanvas` (`src/render/colorFilter.ts`), so the graded pixels
   are identical. `ColorAdjust` on `VideoClip`; e2e proves the grade changes preview luminance.
+
+- [x] **17 — Object-fit (Fit / Fill / Stretch)** — reframe a visual clip into the canvas:
+  contain (letterbox), cover (crop to fill — the reels reframe for landscape media in a vertical
+  canvas), or stretch. Reuses the transform box (overflow clips to the canvas in both renderers)
+  → zero new rendering. `coverBox` (`model.ts`) + `fitClip` (`edits.ts`); inspector buttons.
 
 ## Phases planned (pick any — not strictly ordered)
 

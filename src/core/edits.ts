@@ -6,8 +6,8 @@
  * so these stay deterministic and trivially testable. Undo/redo is handled by
  * the store snapshotting the document around each call.
  */
-import type { Project, Clip, VideoClip, Track, MediaAsset, Effect } from './model';
-import { getMedia, isVideoClip, containedBox } from './model';
+import type { Project, Clip, VideoClip, Track, MediaAsset, Effect, FitMode, Transform } from './model';
+import { getMedia, isVideoClip, containedBox, coverBox } from './model';
 import type { ClipId, EffectId, MediaId, TrackId } from './ids';
 import type { Frames } from './time';
 import { clampFrame } from './time';
@@ -376,6 +376,27 @@ export function makeClipFromMedia(
     motion: 'none',
     adjust: { brightness: 1, contrast: 1, saturate: 1 },
   };
+}
+
+/**
+ * Refit a visual clip's destination box to the canvas: contain (letterbox),
+ * cover (crop to fill), or stretch (exact, ignores aspect). Keeps opacity.
+ */
+export function fitClip(p: Project, clipId: ClipId, mode: FitMode): Project {
+  const clip = p.clips[clipId];
+  if (!clip || clip.kind === 'audio') return p;
+  const media = p.media[clip.mediaId];
+  const sw = media?.width ?? clip.transform.width;
+  const sh = media?.height ?? clip.transform.height;
+  const opacity = clip.transform.opacity;
+  let box: Transform;
+  if (mode === 'stretch') {
+    box = { x: 0, y: 0, width: p.width, height: p.height, opacity };
+  } else {
+    const fit = mode === 'cover' ? coverBox : containedBox;
+    box = { ...fit(sw, sh, p.width, p.height), opacity };
+  }
+  return { ...p, clips: { ...p.clips, [clipId]: { ...clip, transform: box } } };
 }
 
 /** Set a video/image clip's transition-in style. */

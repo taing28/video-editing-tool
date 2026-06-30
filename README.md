@@ -14,7 +14,7 @@ npm run verify     # typecheck + unit tests + browser e2e + export test (full ga
 npm run build      # typecheck + production build
 ```
 
-## What works today (Phases 0–16)
+## What works today (Phases 0–17)
 
 - Import images / audio / **video** (Import button, or drop files on the sidebar).
 - Drag a media card onto a track (or double-click to add).
@@ -40,6 +40,8 @@ npm run build      # typecheck + production build
 - **Color grading** — per-image **brightness / contrast / saturation** sliders (plus B&W and
   Vivid presets). Preview and the exported file are pixel-identical — both draw the same
   cached, CSS-filtered canvas.
+- **Frame fit** — one-click **Fit** (letterbox), **Fill** (crop to fill — reframes a landscape
+  photo into a vertical canvas), or **Stretch** for any image/video clip; then drag to reposition.
 - **Snapping** — dragging a clip snaps its edges to other clips' edges, the playhead, and 0
   (toggle in the timeline toolbar).
 - **Filmstrip thumbnails** on timeline clips (video frames sampled; images tiled) instead of
@@ -139,6 +141,7 @@ src/
 - ~~**Phase 15 — Audio ducking**~~ ✅ done: auto-lower music under voice.
 - ~~**Phase 16 — Color adjustments**~~ ✅ done: per-image brightness/contrast/saturation, with
   preview/export parity via one shared cached filtered canvas.
+- ~~**Phase 17 — Object-fit**~~ ✅ done: Fit / Fill (cover) / Stretch reframing for visual clips.
 - **Next — More:** platform export presets, stickers, color grading for video clips.
 - **Later — Scale:** move render+encode into a Web Worker (note: `OfflineAudioContext` +
   `<video>` seeking are main-thread-only, so this mainly helps pure image+audio projects).

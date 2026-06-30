@@ -111,6 +111,9 @@ export interface Transform {
   opacity: number;
 }
 
+/** How a visual clip's media maps into the canvas frame. */
+export type FitMode = 'contain' | 'cover' | 'stretch';
+
 /**
  * The "contain" box: fit (sw×sh) inside (dw×dh) preserving aspect, centered.
  * Used to give a freshly-added clip a sensible starting transform.
@@ -122,6 +125,23 @@ export function containedBox(
   dh: number,
 ): Transform {
   const base = sw > 0 && sh > 0 ? Math.min(dw / sw, dh / sh) : 1;
+  const width = sw * base;
+  const height = sh * base;
+  return { x: (dw - width) / 2, y: (dh - height) / 2, width, height, opacity: 1 };
+}
+
+/**
+ * The "cover" box: scale (sw×sh) to FILL (dw×dh) preserving aspect, centered —
+ * the media overflows the frame on one axis and is cropped to the canvas by the
+ * renderer. The reframing creators want for landscape media in a vertical canvas.
+ */
+export function coverBox(
+  sw: number,
+  sh: number,
+  dw: number,
+  dh: number,
+): Transform {
+  const base = sw > 0 && sh > 0 ? Math.max(dw / sw, dh / sh) : 1;
   const width = sw * base;
   const height = sh * base;
   return { x: (dw - width) / 2, y: (dh - height) / 2, width, height, opacity: 1 };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createEmptyProject } from './model';
+import { createEmptyProject, coverBox, containedBox } from './model';
 import type { VideoClip, MediaAsset } from './model';
 import { newClipId, newMediaId } from './ids';
 import {
@@ -12,6 +12,7 @@ import {
   setClipFade,
   setClipGain,
   setClipSpeed,
+  fitClip,
 } from './edits';
 import {
   getTrackClips,
@@ -196,5 +197,62 @@ describe('overlapWithPrev (cross-dissolve)', () => {
     const p2 = insertClip(p, clip2);
     expect(overlapWithPrev(p2, p2.clips[id2])).toBe(50);
     expect(overlapWithPrev(p2, p2.clips[clipId])).toBe(0); // first clip, no previous
+  });
+});
+
+describe('coverBox / fitClip (object-fit)', () => {
+  it('coverBox fills the frame and overflows one axis; containedBox fits inside', () => {
+    const cover = coverBox(1920, 1080, 1080, 1920); // landscape media → vertical frame
+    expect(cover.height).toBeCloseTo(1920); // covers the tall axis exactly
+    expect(cover.width).toBeGreaterThan(1080); // overflows horizontally
+    expect(cover.x).toBeLessThan(0); // centered → negative offset
+    const contain = containedBox(1920, 1080, 1080, 1920);
+    expect(contain.width).toBeCloseTo(1080); // fits the wide axis exactly
+    expect(contain.height).toBeLessThan(1920); // letterboxed vertically
+  });
+
+  it('fitClip applies contain / cover / stretch from the media size, keeping opacity', () => {
+    let p = createEmptyProject({ width: 1080, height: 1920 });
+    const trackId = p.trackOrder[0];
+    const mediaId = newMediaId();
+    p = addMedia(p, {
+      id: mediaId,
+      kind: 'image',
+      name: 'wide.png',
+      src: 'blob:x',
+      durationInFrames: 90,
+      width: 1920,
+      height: 1080,
+    });
+    const id = newClipId();
+    const clip: VideoClip = {
+      id,
+      trackId,
+      mediaId,
+      startFrame: 0,
+      durationInFrames: 90,
+      sourceInFrame: 0,
+      speed: 1,
+      fadeInFrames: 0,
+      fadeOutFrames: 0,
+      effectIds: [],
+      kind: 'image',
+      transform: { x: 0, y: 0, width: 100, height: 100, opacity: 0.4 },
+      transition: 'dissolve',
+      motion: 'none',
+      adjust: { brightness: 1, contrast: 1, saturate: 1 },
+    };
+    p = insertClip(p, clip);
+
+    const filled = fitClip(p, id, 'cover').clips[id];
+    expect(filled.kind !== 'audio' && filled.transform.width).toBeGreaterThan(1080);
+    expect(filled.kind !== 'audio' && filled.transform.opacity).toBe(0.4); // preserved
+
+    const fitted = fitClip(p, id, 'contain').clips[id];
+    expect(fitted.kind !== 'audio' && fitted.transform.width).toBeCloseTo(1080);
+
+    const stretched = fitClip(p, id, 'stretch').clips[id];
+    const st = stretched.kind !== 'audio' ? stretched.transform : null;
+    expect(st).toEqual({ x: 0, y: 0, width: 1080, height: 1920, opacity: 0.4 });
   });
 });

@@ -462,6 +462,27 @@ try {
   // The preview must render the graded clip without error (asserted globally).
   await page.waitForTimeout(80);
 
+  log('STEP 14c — frame fit: Fill (cover) overflows, Fit (contain) letterboxes');
+  // The selected image (640×360) sits in a 1080×1920 canvas (set in STEP 12).
+  const fitState = () =>
+    page.evaluate(() => {
+      const ed = window.__editor.getState();
+      const t = ed.project.clips[ed.selectedClipId].transform;
+      return { w: t.width, h: t.height, cw: ed.project.width, ch: ed.project.height };
+    });
+  await page.click('.inspector button:has-text("Fill")');
+  const filled = await fitState();
+  assert(
+    filled.w > filled.cw,
+    `Fill covers + overflows the frame (w=${Math.round(filled.w)} > ${filled.cw})`,
+  );
+  await page.click('.inspector button:has-text("Fit")');
+  const fitted = await fitState();
+  assert(
+    Math.abs(fitted.w - fitted.cw) < 1 && fitted.h < fitted.ch,
+    `Fit contains to width + letterboxes (w=${Math.round(fitted.w)}≈${fitted.cw}, h=${Math.round(fitted.h)}<${fitted.ch})`,
+  );
+
   log('STEP 15 — filmstrip thumbnails on clips');
   await page.waitForSelector('.lane--video .clip .filmstrip__tile', { timeout: 5000 });
   assert(

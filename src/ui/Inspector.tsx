@@ -99,6 +99,7 @@ function ClipEditor() {
   const setClipTransition = useEditor((s) => s.setClipTransition);
   const setClipMotion = useEditor((s) => s.setClipMotion);
   const setClipAdjust = useEditor((s) => s.setClipAdjust);
+  const fitClip = useEditor((s) => s.fitClip);
   const addTransition = useEditor((s) => s.addTransition);
   if (!clip) return null;
 
@@ -180,6 +181,20 @@ function ClipEditor() {
       )}
       {isVisual && (
         <>
+          <label className="field">
+            <span>Frame fit</span>
+            <div className="field-row">
+              <button className="btn btn--mini" onClick={() => fitClip(clip.id, 'contain')}>
+                Fit
+              </button>
+              <button className="btn btn--mini" onClick={() => fitClip(clip.id, 'cover')}>
+                Fill
+              </button>
+              <button className="btn btn--mini" onClick={() => fitClip(clip.id, 'stretch')}>
+                Stretch
+              </button>
+            </div>
+          </label>
           <p className="inspector__hint">Drag on the preview to move; drag a corner to resize.</p>
           <label className="field">
             <span>Opacity ({Math.round(clip.transform.opacity * 100)}%)</span>
