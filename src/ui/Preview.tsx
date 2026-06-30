@@ -14,7 +14,15 @@
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Konva from 'konva';
-import { Stage, Layer, Rect, Image as KonvaImage, Text as KonvaText, Transformer } from 'react-konva';
+import {
+  Stage,
+  Layer,
+  Group,
+  Rect,
+  Image as KonvaImage,
+  Text as KonvaText,
+  Transformer,
+} from 'react-konva';
 import { useEditor } from '../store/editorStore';
 import {
   buildScene,
@@ -170,16 +178,25 @@ export function Preview() {
                 );
               }
               if (layer.kind === 'image') {
+                const t = layer.transition;
+                const slideDx = t?.type === 'slide' ? (1 - t.progress) * layer.width : 0;
                 return (
-                  <KonvaImage
+                  <Group
                     key={layer.clipId}
-                    image={layer.drawable as CanvasImageSource as HTMLImageElement}
-                    x={layer.x}
-                    y={layer.y}
-                    width={layer.width}
-                    height={layer.height}
-                    opacity={layer.opacity}
-                  />
+                    clipX={t?.type === 'wipe' ? layer.x : undefined}
+                    clipY={t?.type === 'wipe' ? layer.y : undefined}
+                    clipWidth={t?.type === 'wipe' ? layer.width * t.progress : undefined}
+                    clipHeight={t?.type === 'wipe' ? layer.height : undefined}
+                  >
+                    <KonvaImage
+                      image={layer.drawable as CanvasImageSource as HTMLImageElement}
+                      x={layer.x + slideDx}
+                      y={layer.y}
+                      width={layer.width}
+                      height={layer.height}
+                      opacity={layer.opacity}
+                    />
+                  </Group>
                 );
               }
               if (layer.kind === 'text') {

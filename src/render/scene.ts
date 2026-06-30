@@ -43,6 +43,8 @@ export interface ImageLayer {
   width: number;
   height: number;
   opacity: number;
+  /** Geometric transition-in across an overlap (dissolve is folded into opacity). */
+  transition?: { type: 'wipe' | 'slide'; progress: number };
 }
 
 export interface TextLayer {
@@ -97,10 +99,26 @@ export function buildScene(project: Project, frame: Frames, resolve: ResolveMedi
   for (const { clip } of getActiveVideoClips(project, frame)) {
     const media = resolve(clip.mediaId);
     if (!media?.drawable) continue;
-    // A same-track overlap with the previous clip becomes a cross-dissolve: the
-    // later clip fades in over the overlap. Combine with any manual fade-in.
-    const fadeIn = Math.max(clip.fadeInFrames, overlapWithPrev(project, clip));
-    const fade = fadeEnvelope(frame, clip.startFrame, clip.durationInFrames, fadeIn, clip.fadeOutFrames);
+    // A same-track overlap with the previous clip is a transition (this clip
+    // transitions IN over the overlap while the previous one plays underneath).
+    const overlap = overlapWithPrev(project, clip);
+    const into = frame - clip.startFrame;
+    const inOverlap = overlap > 0 && into < overlap;
+    const progress = inOverlap ? into / overlap : 1;
+    // Manual fade in/out apply independently of the transition.
+    const fade = fadeEnvelope(
+      frame,
+      clip.startFrame,
+      clip.durationInFrames,
+      clip.fadeInFrames,
+      clip.fadeOutFrames,
+    );
+    let opacity = clip.transform.opacity * fade;
+    let transition: ImageLayer['transition'];
+    if (inOverlap) {
+      if (clip.transition === 'dissolve') opacity *= progress;
+      else transition = { type: clip.transition, progress };
+    }
     layers.push({
       kind: 'image',
       clipId: clip.id,
@@ -109,7 +127,8 @@ export function buildScene(project: Project, frame: Frames, resolve: ResolveMedi
       y: clip.transform.y,
       width: clip.transform.width,
       height: clip.transform.height,
-      opacity: clip.transform.opacity * fade,
+      opacity,
+      transition,
     });
   }
 

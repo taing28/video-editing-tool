@@ -31,8 +31,8 @@ npm run build      # typecheck + production build
 - **Speed control** — per-clip slow-mo / fast-forward (0.25×–4×) for video & audio; changing
   speed re-times the clip's length and pitches audio (preview + export).
 - **Background color** for the canvas (letterbox fill for vertical/odd-ratio media).
-- **Cross-dissolve transitions** — overlap two video clips on a track (drag, or the
-  inspector's "Cross-dissolve with previous" button) and the later clip dissolves in.
+- **Transitions** — overlap two clips on a track (drag, or the inspector's "Add transition"
+  button) and the later clip transitions in with a **dissolve, wipe, or slide** style.
 - **Snapping** — dragging a clip snaps its edges to other clips' edges, the playhead, and 0
   (toggle in the timeline toolbar).
 - **Filmstrip thumbnails** on timeline clips (video frames sampled; images tiled) instead of
@@ -127,7 +127,8 @@ src/
 - ~~**Phase 10 — Auto-captions**~~ ✅ done: on-device Whisper transcription → timed captions.
 - ~~**Phase 11 — Speed control**~~ ✅ done: per-clip 0.25×–4× for video & audio.
 - ~~**Phase 12 — Shapes & lower-thirds**~~ ✅ done: rectangle effect (3rd type) + lower-third.
-- **Phase 13 — More effects:** transition styles (wipe/slide), platform export presets, stickers.
+- ~~**Phase 13 — Transition styles**~~ ✅ done: dissolve / wipe / slide.
+- **Phase 14 — More:** platform export presets, stickers, keyframe animation (Ken Burns).
 - **Later — Scale:** move render+encode into a Web Worker (note: `OfflineAudioContext` +
   `<video>` seeking are main-thread-only, so this mainly helps pure image+audio projects).
 - Optional: wrap in Electron + mediabunny's server backend for native-speed export.

@@ -65,10 +65,15 @@ export interface BaseClip {
   effectIds: EffectId[];
 }
 
+/** How a clip transitions in when it overlaps the previous clip on its track. */
+export type TransitionType = 'dissolve' | 'wipe' | 'slide';
+
 export interface VideoClip extends BaseClip {
   kind: 'image' | 'video';
   /** Destination box (project pixels) + opacity; set to a contained box on add. */
   transform: Transform;
+  /** Transition style used across an overlap with the previous clip. */
+  transition: TransitionType;
 }
 
 export interface AudioClip extends BaseClip {

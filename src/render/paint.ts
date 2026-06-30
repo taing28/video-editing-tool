@@ -19,7 +19,19 @@ export function paintScene(
   for (const layer of scene.layers) {
     if (layer.kind === 'image') {
       ctx.globalAlpha = layer.opacity;
-      ctx.drawImage(layer.drawable, layer.x, layer.y, layer.width, layer.height);
+      if (layer.transition?.type === 'wipe') {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(layer.x, layer.y, layer.width * layer.transition.progress, layer.height);
+        ctx.clip();
+        ctx.drawImage(layer.drawable, layer.x, layer.y, layer.width, layer.height);
+        ctx.restore();
+      } else if (layer.transition?.type === 'slide') {
+        const dx = (1 - layer.transition.progress) * layer.width;
+        ctx.drawImage(layer.drawable, layer.x + dx, layer.y, layer.width, layer.height);
+      } else {
+        ctx.drawImage(layer.drawable, layer.x, layer.y, layer.width, layer.height);
+      }
       ctx.globalAlpha = 1;
     } else if (layer.kind === 'text') {
       // Free-positioned, top-left anchored at (x, y) — mirrors the preview.

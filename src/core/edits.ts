@@ -6,7 +6,7 @@
  * so these stay deterministic and trivially testable. Undo/redo is handled by
  * the store snapshotting the document around each call.
  */
-import type { Project, Clip, Track, MediaAsset, Effect } from './model';
+import type { Project, Clip, VideoClip, Track, MediaAsset, Effect } from './model';
 import { getMedia, isVideoClip, containedBox } from './model';
 import type { ClipId, EffectId, MediaId, TrackId } from './ids';
 import type { Frames } from './time';
@@ -361,7 +361,18 @@ export function makeClipFromMedia(
     p.width,
     p.height,
   );
-  return { ...base, kind: media.kind, transform };
+  return { ...base, kind: media.kind, transform, transition: 'dissolve' };
+}
+
+/** Set a video/image clip's transition-in style. */
+export function setClipTransition(
+  p: Project,
+  clipId: ClipId,
+  transition: VideoClip['transition'],
+): Project {
+  const clip = p.clips[clipId];
+  if (!clip || clip.kind === 'audio') return p;
+  return { ...p, clips: { ...p.clips, [clipId]: { ...clip, transition } } };
 }
 
 /** True if a media asset can be dropped onto a track of the given kind. */

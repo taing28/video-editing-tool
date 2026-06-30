@@ -14,6 +14,7 @@ import {
   useSelectedShape,
 } from '../store/editorStore';
 import { framesToSeconds, secondsToFrames } from '../core/time';
+import type { TransitionType } from '../core/model';
 
 function TextEffectEditor() {
   const effect = useSelectedTextEffect();
@@ -94,6 +95,7 @@ function ClipEditor() {
   const setClipGain = useEditor((s) => s.setClipGain);
   const setClipFade = useEditor((s) => s.setClipFade);
   const setClipSpeed = useEditor((s) => s.setClipSpeed);
+  const setClipTransition = useEditor((s) => s.setClipTransition);
   const addTransition = useEditor((s) => s.addTransition);
   if (!clip) return null;
 
@@ -140,9 +142,22 @@ function ClipEditor() {
           />
         </label>
       )}
+      {(clip.kind === 'image' || clip.kind === 'video') && (
+        <label className="field">
+          <span>Transition</span>
+          <select
+            value={clip.transition}
+            onChange={(e) => setClipTransition(clip.id, e.target.value as TransitionType)}
+          >
+            <option value="dissolve">Dissolve</option>
+            <option value="wipe">Wipe</option>
+            <option value="slide">Slide</option>
+          </select>
+        </label>
+      )}
       {isVisual && hasPrev && (
         <button className="btn btn--block" onClick={addTransition}>
-          ⇄ Cross-dissolve with previous
+          ⇄ Add transition (overlap previous)
         </button>
       )}
       {isVisual && (

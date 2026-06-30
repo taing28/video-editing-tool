@@ -49,9 +49,14 @@ and `src/**/*.test.ts` (Vitest).
 - [x] **12 — Shapes & lower-thirds** — rectangle effect (3rd effect type) with drag/resize on
   the preview + a one-click lower-third (bar + text). (`ShapeEffect` in `src/core/model.ts`.)
 
+- [x] **13 — Transition styles** — dissolve / wipe / slide across a clip overlap. Picked per
+  clip in the inspector; rendered with parity in preview (Konva clip/offset) + export (Canvas2D).
+
 ## Phases planned (pick any — not strictly ordered)
 
-- [ ] **13 — More transitions** — wipe / slide / fade-to-color between clips.
+- [ ] **Ken Burns** — slow pan/zoom on still images (interpolate the transform over the clip).
+  High value for photo slideshows, low render risk (just an animated box).
+- [ ] **Export presets** — one-click TikTok / YouTube / Square (set aspect + resolution).
 - [ ] **Stickers** — image/emoji overlays (reuse the shape interaction + an image source).
 - [ ] **14 — Export presets** — one-click TikTok / Reels / YouTube / Square (sets aspect +
   resolution together).

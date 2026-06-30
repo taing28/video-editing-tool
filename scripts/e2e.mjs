@@ -356,10 +356,10 @@ try {
   );
   assert(effAfter === effBefore + 2, `lower third added a shape + text (${effBefore} -> ${effAfter})`);
 
-  log('STEP 14 — cross-dissolve transition between the two video clips');
+  log('STEP 14 — transition between the two video clips (overlap + wipe style)');
   await page.locator('.lane--video .clip').nth(1).click(); // select the 2nd (later) clip
-  await page.waitForSelector('button:has-text("Cross-dissolve")');
-  await page.click('button:has-text("Cross-dissolve")');
+  await page.waitForSelector('button:has-text("Add transition")');
+  await page.click('button:has-text("Add transition")');
   const overlap = await page.evaluate(() => {
     const p = window.__editor.getState().project;
     const vids = Object.values(p.clips)
@@ -368,7 +368,15 @@ try {
     if (vids.length < 2) return -1;
     return vids[0].startFrame + vids[0].durationInFrames - vids[1].startFrame; // overlap frames
   });
-  assert(overlap > 0, `clips now overlap for a cross-dissolve (${overlap}f)`);
+  assert(overlap > 0, `clips now overlap for a transition (${overlap}f)`);
+  await page.locator('.inspector select').selectOption('wipe'); // Transition style
+  assert(
+    (await page.evaluate(() => {
+      const ed = window.__editor.getState();
+      return ed.project.clips[ed.selectedClipId].transition;
+    })) === 'wipe',
+    'transition style set to wipe',
+  );
 
   log('STEP 15 — filmstrip thumbnails on clips');
   await page.waitForSelector('.lane--video .clip .filmstrip__tile', { timeout: 5000 });
