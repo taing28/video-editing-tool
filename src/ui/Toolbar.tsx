@@ -159,7 +159,12 @@ export function Toolbar() {
         </label>
         <button
           className="btn"
-          onClick={() => void saveProjectFile()}
+          onClick={() => {
+            saveProjectFile().catch((err) => {
+              console.warn('Save project failed:', err);
+              window.alert('Could not save the project file.');
+            });
+          }}
           title="Save the project (timeline + media) to a file you can back up or reopen"
         >
           💾 Save
@@ -178,8 +183,12 @@ export function Toolbar() {
           style={{ display: 'none' }}
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) void openProjectFile(f);
             e.target.value = ''; // allow re-opening the same file
+            if (!f) return;
+            openProjectFile(f).catch((err) => {
+              console.warn('Open project failed:', err);
+              window.alert('Could not open this project file. It may be invalid or corrupted.');
+            });
           }}
         />
         <button

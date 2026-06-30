@@ -610,6 +610,21 @@ try {
   await page.waitForTimeout(200);
   assert((await previewLum(page)) > 100000, 're-imported project renders in the preview');
 
+  log('STEP 19d — opening a non-project file fails gracefully (no crash, project intact)');
+  page.once('dialog', (d) => d.dismiss().catch(() => {})); // the friendly "invalid file" alert
+  const mediaBeforeBad = await page.evaluate(
+    () => Object.keys(window.__editor.getState().project.media).length,
+  );
+  await page.setInputFiles('.toolbar input[type=file]', pngPath); // a PNG, not a bundle
+  await page.waitForTimeout(300);
+  const mediaAfterBad = await page.evaluate(
+    () => Object.keys(window.__editor.getState().project.media).length,
+  );
+  assert(
+    mediaAfterBad === mediaBeforeBad,
+    `project unchanged after a bad open (${mediaBeforeBad} -> ${mediaAfterBad})`,
+  );
+
   log('STEP 20 — delete media removes its clips');
   const beforeMedia = await page.evaluate(
     () => Object.keys(window.__editor.getState().project.media).length,

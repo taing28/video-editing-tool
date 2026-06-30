@@ -17,7 +17,15 @@ npm run verify   # FULL gate: typecheck + unit + e2e + export + video + persist
 Architecture overview + file map: see `README.md`. Tests live in `scripts/` (Playwright)
 and `src/**/*.test.ts` (Vitest).
 
-## Status: Phase 21 complete ✅ — `npm run verify` green (54 unit + e2e + export + video + persist)
+## Status: Phase 21 + hardening pass complete ✅ — `npm run verify` green (54 unit + e2e + export + video + persist)
+
+### Hardening pass (adversarial review of Phases 16–21)
+- **Media leak on project replace** — `loadProject`/`newProject` swapped the document but never
+  released the OUTGOING project's runtime media (object URLs + File blobs), so each open/new
+  leaked the prior project's media. Added `registry.disposeUnusedMedia(keep)`, called on load/new.
+- **Invalid project-file open** — `void openProjectFile(f)` swallowed the rejection from a bad
+  file → unhandled promise rejection + zero user feedback. Toolbar Save/Open now `.catch` with a
+  `console.warn` + a friendly alert; e2e step 19d proves a non-JSON file leaves the project intact.
 
 ## Phases done
 

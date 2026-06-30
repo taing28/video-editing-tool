@@ -62,7 +62,7 @@ import {
   updateEffect as updateEffectEdit,
 } from '../core/edits';
 import { computeDuration } from '../core/selectors';
-import { importFile } from '../media/registry';
+import { importFile, disposeUnusedMedia } from '../media/registry';
 import { exportProject, type ExportOptions } from '../render/export';
 import * as audioEngine from '../playback/audioEngine';
 import * as persistence from './persistence';
@@ -629,6 +629,7 @@ export const useEditor = create<EditorState>((set, get) => {
     newProject: () => {
       stopClock();
       audioEngine.stop();
+      disposeUnusedMedia(new Set()); // a fresh project has no media
       set({
         project: createEmptyProject(),
         selectedClipId: null,
@@ -643,6 +644,9 @@ export const useEditor = create<EditorState>((set, get) => {
     loadProject: (project) => {
       stopClock();
       audioEngine.stop();
+      // Free the outgoing project's runtime media (URLs + blobs); history is
+      // reset on load, so the old media can't be brought back by undo.
+      disposeUnusedMedia(new Set(Object.keys(project.media)));
       set({
         project,
         selectedClipId: null,

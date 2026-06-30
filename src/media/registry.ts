@@ -190,3 +190,14 @@ export function disposeMedia(id: MediaId): void {
   if (entry?.objectUrl) URL.revokeObjectURL(entry.objectUrl);
   entries.delete(id);
 }
+
+/**
+ * Dispose every runtime media NOT in `keep` (object URLs + File blobs).
+ * Called when the whole document is replaced (open file / new project) so the
+ * outgoing project's media doesn't leak.
+ */
+export function disposeUnusedMedia(keep: Set<string>): void {
+  for (const id of [...entries.keys()]) {
+    if (!keep.has(id)) disposeMedia(id as MediaId);
+  }
+}
