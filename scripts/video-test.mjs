@@ -88,6 +88,30 @@ try {
   });
   assert(luminance > 100000, `preview shows a non-black video frame (lum=${luminance})`);
 
+  log('grade the video clip brighter → preview brightens (dynamic color path)');
+  // The video clip is selected after the double-click; the inspector Color
+  // section now applies to video. First slider = Brightness.
+  await page.locator('.inspector__sub input[type=range]').first().evaluate((el) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    setter.call(el, '1.6');
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await page.waitForTimeout(250); // React commit + layout-effect regrade + redraw
+  const lumGraded = await page.evaluate(() => {
+    let sum = 0;
+    for (const c of document.querySelectorAll('.preview canvas')) {
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      if (!ctx) continue;
+      const { data } = ctx.getImageData(0, 0, c.width, c.height);
+      for (let i = 0; i < data.length; i += 4) sum += data[i] + data[i + 1] + data[i + 2];
+    }
+    return sum;
+  });
+  assert(
+    lumGraded > luminance * 1.05,
+    `brightness grade brightens the video preview (${luminance} -> ${lumGraded})`,
+  );
+
   log('re-export the video project');
   const out = path.join(tmp, 'out.mp4');
   await exportAndSave(page, out);

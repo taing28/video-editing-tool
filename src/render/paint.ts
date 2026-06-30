@@ -23,7 +23,14 @@ export function paintScene(
       // Resolve a graded canvas (or the raw drawable for a neutral adjust). The
       // SAME function backs the preview, so export pixels match the preview.
       const src = layer.adjust
-        ? getFilteredCanvas(layer.clipId, layer.drawable, layer.width, layer.height, layer.adjust)
+        ? getFilteredCanvas(
+            layer.clipId,
+            layer.drawable,
+            layer.width,
+            layer.height,
+            layer.adjust,
+            layer.dynamic,
+          )
         : layer.drawable;
       if (layer.transition?.type === 'wipe') {
         ctx.save();

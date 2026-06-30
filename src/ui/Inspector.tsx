@@ -263,7 +263,7 @@ function ClipEditor() {
           </label>
         </>
       )}
-      {clip.kind === 'image' && (
+      {isVisual && (
         <div className="inspector__sub">
           <div className="inspector__subhead">
             <span>Color</span>

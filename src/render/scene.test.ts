@@ -129,5 +129,46 @@ describe('buildScene color adjust', () => {
       },
     };
     expect(bImage(graded, 60, bId)?.adjust?.brightness).toBe(1.5);
+    // image clips are static → not dynamic
+    expect(bImage(graded, 60, bId)?.dynamic).toBeUndefined();
+  });
+
+  it('flags graded VIDEO clips as dynamic (no canvas caching)', () => {
+    let p = createEmptyProject({ fps: 30 });
+    const trackId = p.trackOrder[0];
+    const mediaId = newMediaId();
+    p = addMedia(p, {
+      id: mediaId,
+      kind: 'video',
+      name: 'v.mp4',
+      src: 'blob:v',
+      durationInFrames: 100,
+      width: 100,
+      height: 100,
+    });
+    const id = newClipId();
+    const clip: VideoClip = {
+      id,
+      trackId,
+      mediaId,
+      startFrame: 0,
+      durationInFrames: 50,
+      sourceInFrame: 0,
+      speed: 1,
+      fadeInFrames: 0,
+      fadeOutFrames: 0,
+      effectIds: [],
+      kind: 'video',
+      transform: { x: 0, y: 0, width: 100, height: 100, opacity: 1 },
+      transition: 'dissolve',
+      motion: 'none',
+      adjust: { brightness: 1.2, contrast: 1, saturate: 1 },
+    };
+    p = insertClip(p, clip);
+    const layer = buildScene(p, 10, resolve).layers.find(
+      (l): l is ImageLayer => l.kind === 'image' && l.clipId === id,
+    );
+    expect(layer?.adjust?.brightness).toBe(1.2);
+    expect(layer?.dynamic).toBe(true);
   });
 });

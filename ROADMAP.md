@@ -17,7 +17,7 @@ npm run verify   # FULL gate: typecheck + unit + e2e + export + video + persist
 Architecture overview + file map: see `README.md`. Tests live in `scripts/` (Playwright)
 and `src/**/*.test.ts` (Vitest).
 
-## Status: Phase 18 complete ✅ — `npm run verify` green (48 unit + e2e + export + video + persist)
+## Status: Phase 19 complete ✅ — `npm run verify` green (49 unit + e2e + export + video + persist)
 
 ## Phases done
 
@@ -76,12 +76,18 @@ and `src/**/*.test.ts` (Vitest).
   `opacity` prop = export `globalAlpha`). Shared `OverlayFadeFields` inspector control; a selected
   overlay edits at its base opacity (ignores the fade), like a selected clip ignores its transition.
 
+- [x] **19 — Color grading for video** — extends Phase 16 to video clips. `getFilteredCanvas`
+  gains a `dynamic` mode: a STABLE per-(clip,size) scratch canvas repainted from the video's
+  current frame on every call (no content caching). The preview re-grades dynamic layers right
+  before each Konva redraw (RAF loop, seek handler, and a layout effect for paused edits — a
+  stable canvas ref doesn't signal Konva to repaint); the export re-grades per frame via the same
+  path. video-test proves the preview brightens (+45%) and a graded video still exports.
+
 ## Phases planned (pick any — not strictly ordered)
 
-- [ ] **Export presets** — one-click TikTok / YouTube / Square (set aspect + resolution).
+- [ ] **Export presets** — one-click TikTok / YouTube / Square (mostly redundant: the canvas size
+  dropdown already offers the platform WxH options; would add named labels + 4K/4:5 resolutions).
 - [ ] **Stickers** — image/emoji overlays (reuse the shape interaction + an image source).
-- [ ] **Color for video clips** — extend Phase 16 grading to video (per-frame filtered canvas in
-  the preview redraw loop; export already filters per frame via the same path).
 - [ ] **Export presets (full)** — one-click TikTok / Reels / YouTube / Square (sets aspect +
   resolution together).
 - [ ] **15 — Scale** — move render+encode into a Web Worker. NOTE: `OfflineAudioContext`

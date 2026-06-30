@@ -14,7 +14,7 @@ npm run verify     # typecheck + unit tests + browser e2e + export test (full ga
 npm run build      # typecheck + production build
 ```
 
-## What works today (Phases 0–18)
+## What works today (Phases 0–19)
 
 - Import images / audio / **video** (Import button, or drop files on the sidebar).
 - Drag a media card onto a track (or double-click to add).
@@ -37,9 +37,9 @@ npm run build      # typecheck + production build
   button) and the later clip transitions in with a **dissolve, wipe, or slide** style.
 - **Ken Burns** — animated **pan / zoom** on a clip (zoom in/out, pan left/right) over its
   duration; frozen while you're editing the clip so you can still position it.
-- **Color grading** — per-image **brightness / contrast / saturation** sliders (plus B&W and
-  Vivid presets). Preview and the exported file are pixel-identical — both draw the same
-  cached, CSS-filtered canvas.
+- **Color grading** — **brightness / contrast / saturation** sliders (plus B&W and Vivid presets)
+  on any image **or video** clip. Preview and the exported file match — both draw the same
+  CSS-filtered canvas (cached for stills, re-graded per frame for video).
 - **Frame fit** — one-click **Fit** (letterbox), **Fill** (crop to fill — reframes a landscape
   photo into a vertical canvas), or **Stretch** for any image/video clip; then drag to reposition.
 - **Overlay fades** — text / captions / shapes can **fade in and out** (per-overlay in/out
@@ -145,7 +145,8 @@ src/
   preview/export parity via one shared cached filtered canvas.
 - ~~**Phase 17 — Object-fit**~~ ✅ done: Fit / Fill (cover) / Stretch reframing for visual clips.
 - ~~**Phase 18 — Overlay fades**~~ ✅ done: fade in/out for text / caption / shape overlays.
-- **Next — More:** platform export presets, stickers, color grading for video clips.
+- ~~**Phase 19 — Video color grading**~~ ✅ done: per-frame brightness/contrast/saturation on video.
+- **Next — More:** platform export presets, stickers, project file export/import.
 - **Later — Scale:** move render+encode into a Web Worker (note: `OfflineAudioContext` +
   `<video>` seeking are main-thread-only, so this mainly helps pure image+audio projects).
 - Optional: wrap in Electron + mediabunny's server backend for native-speed export.

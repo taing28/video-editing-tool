@@ -27,6 +27,8 @@ import { useEditor } from '../store/editorStore';
 import {
   buildScene,
   weightToFontStyle,
+  type Scene,
+  type SceneLayer,
   type ImageLayer,
   type TextLayer,
   type ShapeLayer,
@@ -38,12 +40,36 @@ import type { ClipId, EffectId } from '../core/ids';
 
 /**
  * Resolve the drawable for an image layer, applying color grading via the
- * SAME cached function the export uses — so the preview matches the file.
+ * SAME function the export uses — so the preview matches the file. Video layers
+ * are `dynamic` (re-graded each frame); see `regradeDynamic`.
  */
 function drawableFor(layer: ImageLayer): CanvasImageSource {
   return layer.adjust
-    ? getFilteredCanvas(layer.clipId, layer.drawable, layer.width, layer.height, layer.adjust)
+    ? getFilteredCanvas(
+        layer.clipId,
+        layer.drawable,
+        layer.width,
+        layer.height,
+        layer.adjust,
+        layer.dynamic,
+      )
     : layer.drawable;
+}
+
+/**
+ * Repaint the graded canvas for every dynamic (video) layer from its CURRENT
+ * frame. Called right before a Konva redraw so a graded <video> shows the
+ * filtered live frame, not a stale snapshot. Returns how many layers it graded.
+ */
+function regradeDynamic(scene: { layers: SceneLayer[] }): number {
+  let n = 0;
+  for (const layer of scene.layers) {
+    if (layer.kind === 'image' && layer.adjust && layer.dynamic) {
+      getFilteredCanvas(layer.clipId, layer.drawable, layer.width, layer.height, layer.adjust, true);
+      n++;
+    }
+  }
+  return n;
 }
 
 export function Preview() {
@@ -99,6 +125,7 @@ export function Preview() {
         if (Math.abs(el.currentTime - target) > 0.02) {
           const onSeeked = () => {
             el.removeEventListener('seeked', onSeeked);
+            if (sceneRef.current) regradeDynamic(sceneRef.current); // re-grade the new frame
             stageRef.current?.batchDraw(); // redraw all layers (clip may be selected)
           };
           el.addEventListener('seeked', onSeeked);
@@ -123,6 +150,7 @@ export function Preview() {
     if (!isPlaying) return;
     let raf = 0;
     const loop = () => {
+      if (sceneRef.current) regradeDynamic(sceneRef.current); // re-grade live video frames
       stageRef.current?.batchDraw();
       raf = requestAnimationFrame(loop);
     };
@@ -134,6 +162,16 @@ export function Preview() {
     () => buildScene(project, playhead, resolveMedia, selectedClipId ?? undefined),
     [project, playhead, selectedClipId],
   );
+  // Latest scene for the redraw loops (which mustn't re-subscribe per frame).
+  const sceneRef = useRef<Scene | null>(null);
+  sceneRef.current = scene;
+
+  // A dynamic (video) graded layer reuses a stable canvas object, so changing
+  // the grade or playhead while paused doesn't signal Konva to repaint — force
+  // a regrade + redraw whenever the scene changes and dynamic layers exist.
+  useLayoutEffect(() => {
+    if (regradeDynamic(scene) > 0) stageRef.current?.batchDraw();
+  }, [scene]);
 
   const scale =
     box.width > 0 && box.height > 0

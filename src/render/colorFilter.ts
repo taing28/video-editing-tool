@@ -20,9 +20,23 @@ export function filterString(a: ColorAdjust): string {
 const cache = new Map<string, HTMLCanvasElement>();
 const MAX_CACHE = 48;
 
+// Reusable per-clip canvases for DYNAMIC sources (video): the frame changes
+// every seek, so caching by content is wrong. We keep ONE stable canvas per
+// (clip, size) and repaint it on every call — stable identity matters so the
+// Konva preview can keep the same image node and just redraw its pixels.
+const scratch = new Map<string, HTMLCanvasElement>();
+const MAX_SCRATCH = 12;
+
 /**
- * Draw `source` into a canvas with the color filter applied, cached by
- * (key, filter, size). Returns the source unchanged for a neutral adjust.
+ * Draw `source` into a canvas with the color filter applied. Returns the source
+ * unchanged for a neutral adjust.
+ *
+ * - STATIC (images): cached by (key, filter, size) — computed once.
+ * - DYNAMIC (video, `dynamic=true`): a stable per-(key,size) canvas, repainted
+ *   from the source's CURRENT frame on every call (callers draw it immediately).
+ *
+ * Both the preview and the export call this, so a graded clip is identical in
+ * the preview and the exported file.
  */
 export function getFilteredCanvas(
   key: string,
@@ -30,10 +44,35 @@ export function getFilteredCanvas(
   width: number,
   height: number,
   adjust: ColorAdjust,
+  dynamic = false,
 ): CanvasImageSource {
   if (isNeutralAdjust(adjust)) return source;
   const w = Math.max(1, Math.round(width));
   const h = Math.max(1, Math.round(height));
+
+  if (dynamic) {
+    const sKey = `${key}:${w}x${h}`;
+    let canvas = scratch.get(sKey);
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      scratch.set(sKey, canvas);
+      if (scratch.size > MAX_SCRATCH) {
+        const oldest = scratch.keys().next().value;
+        if (oldest) scratch.delete(oldest);
+      }
+    }
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.filter = filterString(adjust);
+      ctx.drawImage(source, 0, 0, w, h);
+      ctx.filter = 'none';
+    }
+    return canvas;
+  }
+
   const cacheKey = `${key}:${filterString(adjust)}:${w}x${h}`;
   const hit = cache.get(cacheKey);
   if (hit) return hit;

@@ -48,8 +48,10 @@ export interface ImageLayer {
   opacity: number;
   /** Geometric transition-in across an overlap (dissolve is folded into opacity). */
   transition?: { type: 'wipe' | 'slide'; progress: number };
-  /** Color grading to apply (image clips). */
+  /** Color grading to apply. */
   adjust?: ColorAdjust;
+  /** The source frame changes per playhead (video) → don't cache the graded canvas. */
+  dynamic?: boolean;
 }
 
 export interface TextLayer {
@@ -139,8 +141,7 @@ export function buildScene(
     const box = animate
       ? kenBurnsBox(clip.transform, clip.motion, into / Math.max(1, clip.durationInFrames - 1))
       : clip.transform;
-    const adjust =
-      clip.kind === 'image' && !isNeutralAdjust(clip.adjust) ? clip.adjust : undefined;
+    const adjust = !isNeutralAdjust(clip.adjust) ? clip.adjust : undefined;
     layers.push({
       kind: 'image',
       clipId: clip.id,
@@ -152,6 +153,7 @@ export function buildScene(
       opacity,
       transition,
       adjust,
+      dynamic: adjust && clip.kind === 'video' ? true : undefined,
     });
   }
 
