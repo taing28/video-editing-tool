@@ -999,12 +999,51 @@
   pointer-events: none;
   opacity: 0.85;
 }
+/* Trim handles: absolutely pinned to each edge (so the right edge always has a
+   real grab target), with a grip pill that's faintly visible at rest and
+   brightens on hover / when the clip is selected. */
 .clip__handle {
-  width: 8px;
-  align-self: stretch;
-  background: rgba(0, 0, 0, 0.28);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
   cursor: ew-resize;
-  flex: 0 0 8px;
+  transition: background 0.12s ease;
+}
+.clip__handle--l {
+  left: 0;
+}
+.clip__handle--r {
+  right: 0;
+}
+.clip__handle::after {
+  content: '';
+  width: 4px;
+  height: 54%;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+  transition: background 0.12s ease, height 0.12s ease, width 0.12s ease;
+}
+.clip:hover .clip__handle::after {
+  background: #fff;
+}
+.clip.is-selected .clip__handle::after {
+  background: #fff;
+  height: 64%;
+}
+.clip__handle:hover {
+  background: rgba(91, 140, 255, 0.18);
+}
+.clip__handle:hover::after {
+  background: #5b8cff;
+  width: 5px;
+  height: 72%;
 }
 
 .playhead {

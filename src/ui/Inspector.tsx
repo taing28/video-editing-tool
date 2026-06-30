@@ -192,20 +192,21 @@ function ClipEditor() {
           </select>
         </label>
       )}
-      {clip.kind === 'image' && (
-        <label className="field">
-          <span>Duration (s)</span>
-          <input
-            type="number"
-            min={0.1}
-            step={0.1}
-            value={seconds.toFixed(1)}
-            onChange={(e) =>
-              setClipDuration(clip.id, secondsToFrames(Number(e.target.value), project.fps))
-            }
-          />
-        </label>
-      )}
+      <label
+        className="field"
+        data-tip="Set the clip's length on the timeline. The handy way to resize a clip whose edge is scrolled off-screen. Video/audio is capped at the source's remaining length."
+      >
+        <span>Duration (s)</span>
+        <input
+          type="number"
+          min={0.1}
+          step={0.1}
+          value={seconds.toFixed(1)}
+          onChange={(e) =>
+            setClipDuration(clip.id, secondsToFrames(Number(e.target.value), project.fps))
+          }
+        />
+      </label>
       {(clip.kind === 'image' || clip.kind === 'video') && (
         <>
           <label

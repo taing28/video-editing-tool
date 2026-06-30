@@ -111,9 +111,17 @@ const ClipBlock = memo(function ClipBlock({ clip, pxPerFrame }: { clip: Clip; px
           />
         )
       )}
-      <span className="clip__handle clip__handle--l" onPointerDown={startDrag('trim-start')} />
+      <span
+        className="clip__handle clip__handle--l"
+        data-tip="Drag to trim the start. Drag back out to restore — trimming never deletes the source."
+        onPointerDown={startDrag('trim-start')}
+      />
       <span className="clip__label">{labelFor(clip, media?.name)}</span>
-      <span className="clip__handle clip__handle--r" onPointerDown={startDrag('trim-end')} />
+      <span
+        className="clip__handle clip__handle--r"
+        data-tip="Drag to trim the end. Drag back out to restore — trimming never deletes the source."
+        onPointerDown={startDrag('trim-end')}
+      />
     </div>
   );
 });

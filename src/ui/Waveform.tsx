@@ -15,6 +15,16 @@ function ctx(): AudioContext {
   return decodeCtx;
 }
 
+/**
+ * Cap on the canvas's intrinsic (backing-store) width. A long clip's display
+ * width can run to tens of thousands of pixels, which exceeds the browser's max
+ * canvas size — the allocation then fails and the canvas renders the broken-image
+ * placeholder. We draw into a capped backing store and let CSS (`width: 100%`)
+ * stretch it across the clip block: a very long clip just gets a lower-res
+ * waveform instead of a broken one.
+ */
+const MAX_WAVEFORM_PX = 4096;
+
 function computePeaks(
   data: Float32Array,
   rate: number,
@@ -57,7 +67,10 @@ export function Waveform({
       if (cancelled || !buffer) return;
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const width = Math.max(1, Math.round(clip.durationInFrames * pxPerFrame));
+      // Display width follows the clip; the backing store is capped so a very
+      // long clip can't blow past the browser's max canvas size (see above).
+      const displayWidth = Math.max(1, Math.round(clip.durationInFrames * pxPerFrame));
+      const width = Math.min(displayWidth, MAX_WAVEFORM_PX);
       const height = canvas.height;
       canvas.width = width;
       const c2d = canvas.getContext('2d');
