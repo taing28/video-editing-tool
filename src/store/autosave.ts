@@ -29,9 +29,15 @@ export async function restoreAndStartAutosave(): Promise<void> {
     if (saved) {
       // Migrate documents saved by older versions (fields added in later phases).
       for (const clip of Object.values(saved.clips)) {
-        const c = clip as unknown as { speed?: number; transition?: string; kind?: string };
+        const c = clip as unknown as {
+          speed?: number;
+          transition?: string;
+          motion?: string;
+          kind?: string;
+        };
         if (typeof c.speed !== 'number') c.speed = 1;
         if (c.kind !== 'audio' && c.transition === undefined) c.transition = 'dissolve';
+        if (c.kind !== 'audio' && c.motion === undefined) c.motion = 'none';
       }
       // Rebuild runtime media (drawables / decoded elements) from saved blobs,
       // and refresh each asset's object URL.

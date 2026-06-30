@@ -68,12 +68,17 @@ export interface BaseClip {
 /** How a clip transitions in when it overlaps the previous clip on its track. */
 export type TransitionType = 'dissolve' | 'wipe' | 'slide';
 
+/** Ken Burns pan/zoom motion applied over a clip's duration. */
+export type KenBurns = 'none' | 'zoomIn' | 'zoomOut' | 'panLeft' | 'panRight';
+
 export interface VideoClip extends BaseClip {
   kind: 'image' | 'video';
   /** Destination box (project pixels) + opacity; set to a contained box on add. */
   transform: Transform;
   /** Transition style used across an overlap with the previous clip. */
   transition: TransitionType;
+  /** Animated pan/zoom over the clip's duration. */
+  motion: KenBurns;
 }
 
 export interface AudioClip extends BaseClip {

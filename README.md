@@ -33,6 +33,8 @@ npm run build      # typecheck + production build
 - **Background color** for the canvas (letterbox fill for vertical/odd-ratio media).
 - **Transitions** — overlap two clips on a track (drag, or the inspector's "Add transition"
   button) and the later clip transitions in with a **dissolve, wipe, or slide** style.
+- **Ken Burns** — animated **pan / zoom** on a clip (zoom in/out, pan left/right) over its
+  duration; frozen while you're editing the clip so you can still position it.
 - **Snapping** — dragging a clip snaps its edges to other clips' edges, the playhead, and 0
   (toggle in the timeline toolbar).
 - **Filmstrip thumbnails** on timeline clips (video frames sampled; images tiled) instead of
@@ -128,7 +130,8 @@ src/
 - ~~**Phase 11 — Speed control**~~ ✅ done: per-clip 0.25×–4× for video & audio.
 - ~~**Phase 12 — Shapes & lower-thirds**~~ ✅ done: rectangle effect (3rd type) + lower-third.
 - ~~**Phase 13 — Transition styles**~~ ✅ done: dissolve / wipe / slide.
-- **Phase 14 — More:** platform export presets, stickers, keyframe animation (Ken Burns).
+- ~~**Phase 14 — Ken Burns**~~ ✅ done: animated pan/zoom on clips.
+- **Phase 15 — More:** platform export presets, stickers, audio ducking.
 - **Later — Scale:** move render+encode into a Web Worker (note: `OfflineAudioContext` +
   `<video>` seeking are main-thread-only, so this mainly helps pure image+audio projects).
 - Optional: wrap in Electron + mediabunny's server backend for native-speed export.

@@ -21,6 +21,7 @@ import {
   fadeEnvelope,
   overlapWithPrev,
 } from '../core/selectors';
+import { kenBurnsBox } from './kenburns';
 import type { MediaId } from '../core/ids';
 
 /** What the media registry hands back for a loaded asset. */
@@ -91,7 +92,13 @@ export interface Scene {
   layers: SceneLayer[];
 }
 
-export function buildScene(project: Project, frame: Frames, resolve: ResolveMedia): Scene {
+export function buildScene(
+  project: Project,
+  frame: Frames,
+  resolve: ResolveMedia,
+  /** Clip to render at its base box (no Ken Burns) — i.e. the one being edited. */
+  freezeMotionFor?: string,
+): Scene {
   const layers: SceneLayer[] = [];
 
   // Visual clips, bottom-to-top. Geometry comes straight from the clip's
@@ -119,14 +126,19 @@ export function buildScene(project: Project, frame: Frames, resolve: ResolveMedi
       if (clip.transition === 'dissolve') opacity *= progress;
       else transition = { type: clip.transition, progress };
     }
+    // Ken Burns: animate the destination box over the clip (frozen while editing).
+    const animate = clip.motion !== 'none' && clip.id !== freezeMotionFor;
+    const box = animate
+      ? kenBurnsBox(clip.transform, clip.motion, into / Math.max(1, clip.durationInFrames - 1))
+      : clip.transform;
     layers.push({
       kind: 'image',
       clipId: clip.id,
       drawable: media.drawable,
-      x: clip.transform.x,
-      y: clip.transform.y,
-      width: clip.transform.width,
-      height: clip.transform.height,
+      x: box.x,
+      y: box.y,
+      width: box.width,
+      height: box.height,
       opacity,
       transition,
     });

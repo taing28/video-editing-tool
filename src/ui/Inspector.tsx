@@ -14,7 +14,7 @@ import {
   useSelectedShape,
 } from '../store/editorStore';
 import { framesToSeconds, secondsToFrames } from '../core/time';
-import type { TransitionType } from '../core/model';
+import type { TransitionType, KenBurns } from '../core/model';
 
 function TextEffectEditor() {
   const effect = useSelectedTextEffect();
@@ -96,6 +96,7 @@ function ClipEditor() {
   const setClipFade = useEditor((s) => s.setClipFade);
   const setClipSpeed = useEditor((s) => s.setClipSpeed);
   const setClipTransition = useEditor((s) => s.setClipTransition);
+  const setClipMotion = useEditor((s) => s.setClipMotion);
   const addTransition = useEditor((s) => s.addTransition);
   if (!clip) return null;
 
@@ -143,17 +144,32 @@ function ClipEditor() {
         </label>
       )}
       {(clip.kind === 'image' || clip.kind === 'video') && (
-        <label className="field">
-          <span>Transition</span>
-          <select
-            value={clip.transition}
-            onChange={(e) => setClipTransition(clip.id, e.target.value as TransitionType)}
-          >
-            <option value="dissolve">Dissolve</option>
-            <option value="wipe">Wipe</option>
-            <option value="slide">Slide</option>
-          </select>
-        </label>
+        <>
+          <label className="field">
+            <span>Motion (Ken Burns)</span>
+            <select
+              value={clip.motion}
+              onChange={(e) => setClipMotion(clip.id, e.target.value as KenBurns)}
+            >
+              <option value="none">None</option>
+              <option value="zoomIn">Zoom in</option>
+              <option value="zoomOut">Zoom out</option>
+              <option value="panLeft">Pan left</option>
+              <option value="panRight">Pan right</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>Transition</span>
+            <select
+              value={clip.transition}
+              onChange={(e) => setClipTransition(clip.id, e.target.value as TransitionType)}
+            >
+              <option value="dissolve">Dissolve</option>
+              <option value="wipe">Wipe</option>
+              <option value="slide">Slide</option>
+            </select>
+          </label>
+        </>
       )}
       {isVisual && hasPrev && (
         <button className="btn btn--block" onClick={addTransition}>

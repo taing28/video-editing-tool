@@ -19,6 +19,7 @@ import type {
   TrackKind,
   Transform,
   TransitionType,
+  KenBurns,
 } from '../core/model';
 import { createEmptyProject, getTrack } from '../core/model';
 import type { ClipId, EffectId, MediaId, TrackId } from '../core/ids';
@@ -45,6 +46,7 @@ import {
   setClipDuration as setClipDurationEdit,
   setClipFade as setClipFadeEdit,
   setClipGain as setClipGainEdit,
+  setClipMotion as setClipMotionEdit,
   setClipSpeed as setClipSpeedEdit,
   setClipTransition as setClipTransitionEdit,
   splitClip as splitClipEdit,
@@ -114,6 +116,7 @@ export interface EditorState {
   setClipFade: (id: ClipId, patch: { fadeInFrames?: number; fadeOutFrames?: number }) => void;
   setClipSpeed: (id: ClipId, speed: number) => void;
   setClipTransition: (id: ClipId, transition: TransitionType) => void;
+  setClipMotion: (id: ClipId, motion: KenBurns) => void;
   setBackground: (color: string) => void;
 
   // interactive drag lifecycle (one undo step per gesture)
@@ -322,6 +325,7 @@ export const useEditor = create<EditorState>((set, get) => {
     setClipSpeed: (id, speed) => commit((p) => setClipSpeedEdit(p, id, speed)),
     setClipTransition: (id, transition) =>
       commit((p) => setClipTransitionEdit(p, id, transition)),
+    setClipMotion: (id, motion) => commit((p) => setClipMotionEdit(p, id, motion)),
     setBackground: (color) => commit((p) => setBackgroundEdit(p, color)),
 
     beginInteraction: () => {

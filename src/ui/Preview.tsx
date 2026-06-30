@@ -119,7 +119,10 @@ export function Preview() {
     return () => cancelAnimationFrame(raf);
   }, [isPlaying]);
 
-  const scene = useMemo(() => buildScene(project, playhead, resolveMedia), [project, playhead]);
+  const scene = useMemo(
+    () => buildScene(project, playhead, resolveMedia, selectedClipId ?? undefined),
+    [project, playhead, selectedClipId],
+  );
 
   const scale =
     box.width > 0 && box.height > 0

@@ -44,6 +44,7 @@ function setup() {
     kind: 'video',
     transform: { x: 0, y: 0, width: 1920, height: 1080, opacity: 1 },
     transition: 'dissolve',
+    motion: 'none',
   };
   p = insertClip(p, clip);
   return { p, clipId, videoTrackId, mediaId };

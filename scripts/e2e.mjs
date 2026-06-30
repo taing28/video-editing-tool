@@ -369,13 +369,22 @@ try {
     return vids[0].startFrame + vids[0].durationInFrames - vids[1].startFrame; // overlap frames
   });
   assert(overlap > 0, `clips now overlap for a transition (${overlap}f)`);
-  await page.locator('.inspector select').selectOption('wipe'); // Transition style
+  // image clip inspector selects: [Motion, Transition]
+  await page.locator('.inspector select').nth(1).selectOption('wipe'); // Transition
   assert(
     (await page.evaluate(() => {
       const ed = window.__editor.getState();
       return ed.project.clips[ed.selectedClipId].transition;
     })) === 'wipe',
     'transition style set to wipe',
+  );
+  await page.locator('.inspector select').nth(0).selectOption('zoomIn'); // Ken Burns motion
+  assert(
+    (await page.evaluate(() => {
+      const ed = window.__editor.getState();
+      return ed.project.clips[ed.selectedClipId].motion;
+    })) === 'zoomIn',
+    'Ken Burns motion set to zoom in',
   );
 
   log('STEP 15 — filmstrip thumbnails on clips');

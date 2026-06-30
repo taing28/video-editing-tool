@@ -31,6 +31,7 @@ function setup(transition: TransitionType) {
     kind: 'image' as const,
     transform: { x: 0, y: 0, width: 100, height: 100, opacity: 1 },
     transition: 'dissolve' as TransitionType,
+    motion: 'none' as const,
   };
   const a: VideoClip = { ...base, id: newClipId(), startFrame: 0 };
   const bId = newClipId();
@@ -59,5 +60,53 @@ describe('buildScene transitions', () => {
     const layer = bImage(p, 45, bId);
     expect(layer?.transition).toBeUndefined();
     expect(layer?.opacity).toBeCloseTo(0.5);
+  });
+});
+
+describe('buildScene Ken Burns', () => {
+  function single(motion: 'none' | 'zoomIn') {
+    let p = createEmptyProject({ fps: 30 });
+    const trackId = p.trackOrder[0];
+    const mediaId = newMediaId();
+    p = addMedia(p, {
+      id: mediaId,
+      kind: 'image',
+      name: 'x',
+      src: 'blob:x',
+      durationInFrames: 100,
+      width: 100,
+      height: 100,
+    });
+    const id = newClipId();
+    const clip: VideoClip = {
+      id,
+      trackId,
+      mediaId,
+      startFrame: 0,
+      durationInFrames: 30,
+      sourceInFrame: 0,
+      speed: 1,
+      fadeInFrames: 0,
+      fadeOutFrames: 0,
+      effectIds: [],
+      kind: 'image',
+      transform: { x: 0, y: 0, width: 100, height: 100, opacity: 1 },
+      transition: 'dissolve',
+      motion,
+    };
+    return { p: insertClip(p, clip), id };
+  }
+  const w = (p: ReturnType<typeof single>['p'], frame: number, freeze?: string) =>
+    (buildScene(p, frame, resolve, freeze).layers.find((l) => l.kind === 'image') as ImageLayer)
+      .width;
+
+  it('zoom grows the box across the clip', () => {
+    const { p } = single('zoomIn');
+    expect(w(p, 29)).toBeGreaterThan(w(p, 0));
+  });
+
+  it('freezes motion for the clip being edited', () => {
+    const { p, id } = single('zoomIn');
+    expect(w(p, 29, id)).toBeCloseTo(100); // base box, no zoom
   });
 });

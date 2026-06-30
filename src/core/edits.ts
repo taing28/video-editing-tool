@@ -361,7 +361,7 @@ export function makeClipFromMedia(
     p.width,
     p.height,
   );
-  return { ...base, kind: media.kind, transform, transition: 'dissolve' };
+  return { ...base, kind: media.kind, transform, transition: 'dissolve', motion: 'none' };
 }
 
 /** Set a video/image clip's transition-in style. */
@@ -373,6 +373,13 @@ export function setClipTransition(
   const clip = p.clips[clipId];
   if (!clip || clip.kind === 'audio') return p;
   return { ...p, clips: { ...p.clips, [clipId]: { ...clip, transition } } };
+}
+
+/** Set a video/image clip's Ken Burns pan/zoom motion. */
+export function setClipMotion(p: Project, clipId: ClipId, motion: VideoClip['motion']): Project {
+  const clip = p.clips[clipId];
+  if (!clip || clip.kind === 'audio') return p;
+  return { ...p, clips: { ...p.clips, [clipId]: { ...clip, motion } } };
 }
 
 /** True if a media asset can be dropped onto a track of the given kind. */

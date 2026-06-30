@@ -52,10 +52,12 @@ and `src/**/*.test.ts` (Vitest).
 - [x] **13 — Transition styles** — dissolve / wipe / slide across a clip overlap. Picked per
   clip in the inspector; rendered with parity in preview (Konva clip/offset) + export (Canvas2D).
 
+- [x] **14 — Ken Burns** — animated pan/zoom over a clip (`kenBurnsBox` in `src/render/kenburns.ts`;
+  applied in buildScene, frozen for the clip being edited). Pure box animation → preview + export
+  parity for free.
+
 ## Phases planned (pick any — not strictly ordered)
 
-- [ ] **Ken Burns** — slow pan/zoom on still images (interpolate the transform over the clip).
-  High value for photo slideshows, low render risk (just an animated box).
 - [ ] **Export presets** — one-click TikTok / YouTube / Square (set aspect + resolution).
 - [ ] **Stickers** — image/emoji overlays (reuse the shape interaction + an image source).
 - [ ] **14 — Export presets** — one-click TikTok / Reels / YouTube / Square (sets aspect +
