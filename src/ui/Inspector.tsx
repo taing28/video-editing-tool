@@ -93,6 +93,7 @@ function ClipEditor() {
   const setClipDuration = useEditor((s) => s.setClipDuration);
   const setClipTransform = useEditor((s) => s.setClipTransform);
   const setClipGain = useEditor((s) => s.setClipGain);
+  const setClipDuck = useEditor((s) => s.setClipDuck);
   const setClipFade = useEditor((s) => s.setClipFade);
   const setClipSpeed = useEditor((s) => s.setClipSpeed);
   const setClipTransition = useEditor((s) => s.setClipTransition);
@@ -195,17 +196,27 @@ function ClipEditor() {
         </>
       )}
       {clip.kind === 'audio' && (
-        <label className="field">
-          <span>Volume ({Math.round(clip.gain * 100)}%)</span>
-          <input
-            type="range"
-            min={0}
-            max={2}
-            step={0.05}
-            value={clip.gain}
-            onChange={(e) => setClipGain(clip.id, Number(e.target.value))}
-          />
-        </label>
+        <>
+          <label className="field">
+            <span>Volume ({Math.round(clip.gain * 100)}%)</span>
+            <input
+              type="range"
+              min={0}
+              max={2}
+              step={0.05}
+              value={clip.gain}
+              onChange={(e) => setClipGain(clip.id, Number(e.target.value))}
+            />
+          </label>
+          <label className="field-check">
+            <input
+              type="checkbox"
+              checked={clip.duck}
+              onChange={(e) => setClipDuck(clip.id, e.target.checked)}
+            />
+            <span>Duck under voice (lower while other audio plays)</span>
+          </label>
+        </>
       )}
       <div className="field-row">
         <label className="field">

@@ -26,11 +26,18 @@ import {
   type AudioCodec,
 } from 'mediabunny';
 import type { Project } from '../core/model';
-import { computeDuration, getActiveAudioClips, getActiveVideoClips, sourceFrameAt } from '../core/selectors';
+import {
+  computeDuration,
+  getActiveAudioClips,
+  getActiveVideoClips,
+  sourceFrameAt,
+  voiceIntervals,
+} from '../core/selectors';
 import { buildScene } from './scene';
 import { paintScene } from './paint';
 import { resolveMedia, getAudioBuffer, getVideoElement } from '../media/registry';
 import { scheduleGainFade } from '../playback/audioFade';
+import { scheduleDuck, DUCK_LEVEL } from '../playback/duck';
 
 export interface ExportResult {
   blob: Blob;
@@ -119,6 +126,9 @@ async function mixAudio(project: Project, totalSeconds: number): Promise<AudioBu
 
   const length = Math.max(1, Math.ceil(totalSeconds * SAMPLE_RATE));
   const ctx = new OfflineAudioContext(2, length, SAMPLE_RATE);
+  const voice = voiceIntervals(project).map(
+    ([s, e]) => [s / project.fps, e / project.fps] as [number, number],
+  );
 
   let scheduled = 0;
   for (const { clip } of clips) {
@@ -140,7 +150,13 @@ async function mixAudio(project: Project, totalSeconds: number): Promise<AudioBu
       timelineDur,
       0,
     );
-    node.connect(gain).connect(ctx.destination);
+    if (clip.duck) {
+      const duckGain = ctx.createGain();
+      scheduleDuck(duckGain.gain, when, when, when + timelineDur, voice, DUCK_LEVEL);
+      node.connect(gain).connect(duckGain).connect(ctx.destination);
+    } else {
+      node.connect(gain).connect(ctx.destination);
+    }
     // At playbackRate `speed`, filling `timelineDur` needs speed× source seconds.
     const available = Math.max(0, buffer.duration - offset);
     node.start(when, offset, Math.min(timelineDur * clip.speed, available));

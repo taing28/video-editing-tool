@@ -28,6 +28,8 @@ npm run build      # typecheck + production build
 - **Audio waveforms** drawn on audio clips in the timeline.
 - **Per-clip volume** (audio) and **fade in / fade out** (video opacity + audio gain ramps,
   applied identically in preview and export).
+- **Audio ducking** — mark a music clip "duck under voice" and it auto-lowers whenever other
+  (non-ducked) audio plays, so the voiceover stays clear (preview + export).
 - **Speed control** — per-clip slow-mo / fast-forward (0.25×–4×) for video & audio; changing
   speed re-times the clip's length and pitches audio (preview + export).
 - **Background color** for the canvas (letterbox fill for vertical/odd-ratio media).
@@ -131,7 +133,8 @@ src/
 - ~~**Phase 12 — Shapes & lower-thirds**~~ ✅ done: rectangle effect (3rd type) + lower-third.
 - ~~**Phase 13 — Transition styles**~~ ✅ done: dissolve / wipe / slide.
 - ~~**Phase 14 — Ken Burns**~~ ✅ done: animated pan/zoom on clips.
-- **Phase 15 — More:** platform export presets, stickers, audio ducking.
+- ~~**Phase 15 — Audio ducking**~~ ✅ done: auto-lower music under voice.
+- **Phase 16 — More:** platform export presets, stickers, color adjustments.
 - **Later — Scale:** move render+encode into a Web Worker (note: `OfflineAudioContext` +
   `<video>` seeking are main-thread-only, so this mainly helps pure image+audio projects).
 - Optional: wrap in Electron + mediabunny's server backend for native-speed export.

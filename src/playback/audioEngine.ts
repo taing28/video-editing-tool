@@ -12,9 +12,10 @@
  */
 import type { Project } from '../core/model';
 import { isAudioClip } from '../core/model';
-import { getTracksInOrder, getTrackClips } from '../core/selectors';
+import { getTracksInOrder, getTrackClips, voiceIntervals } from '../core/selectors';
 import { getAudioBuffer } from '../media/registry';
 import { scheduleGainFade } from './audioFade';
+import { scheduleDuck, DUCK_LEVEL } from './duck';
 
 let ctx: AudioContext | null = null;
 let active: AudioBufferSourceNode[] = [];
@@ -72,6 +73,9 @@ export async function start(project: Project, fromFrame: number, fps: number): P
 
   const t0 = ctx.currentTime + 0.04; // tiny lead so scheduling is reliable
   const playSec = fromFrame / fps;
+  const voice = voiceIntervals(project).map(
+    ([s, e]) => [s / fps, e / fps] as [number, number],
+  );
 
   clips.forEach((clip, i) => {
     const buffer = buffers[i];
@@ -104,7 +108,13 @@ export async function start(project: Project, fromFrame: number, fps: number): P
       clip.durationInFrames / project.fps,
       elapsedSec,
     );
-    node.connect(gain).connect(ctx!.destination);
+    if (clip.duck) {
+      const duckGain = ctx!.createGain();
+      scheduleDuck(duckGain.gain, when, Math.max(clipStartSec, playSec), clipEndSec, voice, DUCK_LEVEL);
+      node.connect(gain).connect(duckGain).connect(ctx!.destination);
+    } else {
+      node.connect(gain).connect(ctx!.destination);
+    }
     node.start(when, offset, duration);
     active.push(node);
   });

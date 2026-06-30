@@ -291,6 +291,18 @@
 .field-row .field {
   flex: 1;
 }
+.field-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.field-check input {
+  flex: 0 0 auto;
+}
 .field > span {
   color: var(--muted);
   font-size: 11px;

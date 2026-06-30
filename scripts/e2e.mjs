@@ -164,6 +164,16 @@ try {
   assert(sped.speed === 2, `speed set to 2× (${sped.speed})`);
   assert(sped.dur === Math.round(durBefore / 2), `2× halved duration (${durBefore} -> ${sped.dur})`);
 
+  log('STEP 5d — duck under voice');
+  await page.locator('.inspector input[type=checkbox]').check();
+  assert(
+    await page.evaluate(() => {
+      const ed = window.__editor.getState();
+      return ed.project.clips[ed.selectedClipId].duck;
+    }),
+    'audio clip set to duck under voice',
+  );
+
   log('STEP 6 — select + split at playhead');
   await page.click('.lane--video .clip');
   await page.click('.ruler', { position: { x: 150, y: 12 } }); // scrub into the clip

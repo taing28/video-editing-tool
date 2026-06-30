@@ -56,10 +56,16 @@ and `src/**/*.test.ts` (Vitest).
   applied in buildScene, frozen for the clip being edited). Pure box animation → preview + export
   parity for free.
 
+- [x] **15 — Audio ducking** — per-clip "duck under voice"; auto-lowers music while non-ducked
+  audio plays. `voiceIntervals` (selectors) + `computeDuckRamps`/`scheduleDuck` (`src/playback/duck.ts`)
+  applied in the preview engine + export mixdown.
+
 ## Phases planned (pick any — not strictly ordered)
 
 - [ ] **Export presets** — one-click TikTok / YouTube / Square (set aspect + resolution).
 - [ ] **Stickers** — image/emoji overlays (reuse the shape interaction + an image source).
+- [ ] **Color adjustments** — brightness/contrast/saturation (note: Konva-vs-Canvas2D filter
+  parity needs care — match the math, or render export via the same filter string).
 - [ ] **14 — Export presets** — one-click TikTok / Reels / YouTube / Square (sets aspect +
   resolution together).
 - [ ] **15 — Scale** — move render+encode into a Web Worker. NOTE: `OfflineAudioContext`

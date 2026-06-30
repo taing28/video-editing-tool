@@ -85,6 +85,8 @@ export interface AudioClip extends BaseClip {
   kind: 'audio';
   /** Linear gain multiplier (1 = unchanged). */
   gain: number;
+  /** Auto-lower this clip while other (non-ducked) audio — "voice" — is playing. */
+  duck: boolean;
 }
 
 export type Clip = VideoClip | AudioClip;

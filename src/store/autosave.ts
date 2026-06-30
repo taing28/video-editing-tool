@@ -33,11 +33,13 @@ export async function restoreAndStartAutosave(): Promise<void> {
           speed?: number;
           transition?: string;
           motion?: string;
+          duck?: boolean;
           kind?: string;
         };
         if (typeof c.speed !== 'number') c.speed = 1;
         if (c.kind !== 'audio' && c.transition === undefined) c.transition = 'dissolve';
         if (c.kind !== 'audio' && c.motion === undefined) c.motion = 'none';
+        if (c.kind === 'audio' && typeof c.duck !== 'boolean') c.duck = false;
       }
       // Rebuild runtime media (drawables / decoded elements) from saved blobs,
       // and refresh each asset's object URL.

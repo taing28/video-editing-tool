@@ -43,6 +43,7 @@ import {
   toggleTrackHidden as toggleTrackHiddenEdit,
   toggleTrackMuted as toggleTrackMutedEdit,
   setCanvasSize as setCanvasSizeEdit,
+  setClipDuck as setClipDuckEdit,
   setClipDuration as setClipDurationEdit,
   setClipFade as setClipFadeEdit,
   setClipGain as setClipGainEdit,
@@ -113,6 +114,7 @@ export interface EditorState {
   setClipDuration: (id: ClipId, duration: Frames) => void;
   setClipTransform: (id: ClipId, transform: Transform) => void;
   setClipGain: (id: ClipId, gain: number) => void;
+  setClipDuck: (id: ClipId, duck: boolean) => void;
   setClipFade: (id: ClipId, patch: { fadeInFrames?: number; fadeOutFrames?: number }) => void;
   setClipSpeed: (id: ClipId, speed: number) => void;
   setClipTransition: (id: ClipId, transition: TransitionType) => void;
@@ -321,6 +323,7 @@ export const useEditor = create<EditorState>((set, get) => {
       }),
 
     setClipGain: (id, gain) => commit((p) => setClipGainEdit(p, id, gain)),
+    setClipDuck: (id, duck) => commit((p) => setClipDuckEdit(p, id, duck)),
     setClipFade: (id, patch) => commit((p) => setClipFadeEdit(p, id, patch)),
     setClipSpeed: (id, speed) => commit((p) => setClipSpeedEdit(p, id, speed)),
     setClipTransition: (id, transition) =>

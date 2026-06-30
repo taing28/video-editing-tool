@@ -13,7 +13,14 @@ import {
   setClipGain,
   setClipSpeed,
 } from './edits';
-import { getTrackClips, fadeMultiplier, overlapWithPrev, sourceFrameAt } from './selectors';
+import {
+  getTrackClips,
+  fadeMultiplier,
+  overlapWithPrev,
+  sourceFrameAt,
+  voiceIntervals,
+} from './selectors';
+import type { AudioClip } from './model';
 
 function setup() {
   let p = createEmptyProject({ fps: 30 });
@@ -151,6 +158,32 @@ describe('speed', () => {
     const { p, clipId } = setup(); // start 100, source 0
     const c = setClipSpeed(p, clipId, 2).clips[clipId];
     expect(sourceFrameAt(c, 110)).toBe(20); // 10 timeline frames × 2
+  });
+});
+
+describe('voiceIntervals (ducking)', () => {
+  it('merges non-ducked audio ranges and excludes ducked clips', () => {
+    let p = createEmptyProject({ fps: 30 });
+    const audioTrack = p.trackOrder[1];
+    const mk = (start: number, dur: number, duck: boolean): AudioClip => ({
+      id: newClipId(),
+      trackId: audioTrack,
+      mediaId: newMediaId(),
+      startFrame: start,
+      durationInFrames: dur,
+      sourceInFrame: 0,
+      speed: 1,
+      fadeInFrames: 0,
+      fadeOutFrames: 0,
+      effectIds: [],
+      kind: 'audio',
+      gain: 1,
+      duck,
+    });
+    p = insertClip(p, mk(0, 30, false)); // voice 0..30
+    p = insertClip(p, mk(20, 30, false)); // voice 20..50 → merges to 0..50
+    p = insertClip(p, mk(60, 30, true)); // ducked → excluded
+    expect(voiceIntervals(p)).toEqual([[0, 50]]);
   });
 });
 

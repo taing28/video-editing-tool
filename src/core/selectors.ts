@@ -131,6 +131,27 @@ export function overlapWithPrev(p: Project, clip: Clip): Frames {
   return Math.max(0, prev.startFrame + prev.durationInFrames - clip.startFrame);
 }
 
+/**
+ * Merged timeline ranges (frames) of "voice" — audio clips NOT marked `duck`.
+ * Ducked clips lower their volume whenever one of these is playing.
+ */
+export function voiceIntervals(p: Project): Array<[Frames, Frames]> {
+  const ranges: Array<[number, number]> = [];
+  for (const clip of Object.values(p.clips)) {
+    if (clip.kind === 'audio' && !clip.duck) {
+      ranges.push([clip.startFrame, clip.startFrame + clip.durationInFrames]);
+    }
+  }
+  ranges.sort((a, b) => a[0] - b[0]);
+  const merged: Array<[number, number]> = [];
+  for (const [s, e] of ranges) {
+    const last = merged[merged.length - 1];
+    if (last && s <= last[1]) last[1] = Math.max(last[1], e);
+    else merged.push([s, e]);
+  }
+  return merged;
+}
+
 /** Total timeline length: the furthest clip end across all tracks. */
 export function computeDuration(p: Project): Frames {
   let max = 0;

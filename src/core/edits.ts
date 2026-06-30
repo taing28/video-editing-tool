@@ -289,6 +289,13 @@ export function setClipGain(p: Project, clipId: ClipId, gain: number): Project {
   return { ...p, clips: { ...p.clips, [clipId]: { ...clip, gain: Math.max(0, gain) } } };
 }
 
+/** Toggle whether an audio clip ducks under "voice" (other non-ducked audio). */
+export function setClipDuck(p: Project, clipId: ClipId, duck: boolean): Project {
+  const clip = p.clips[clipId];
+  if (!clip || clip.kind !== 'audio') return p;
+  return { ...p, clips: { ...p.clips, [clipId]: { ...clip, duck } } };
+}
+
 /** Set a clip's fade in/out (frames), clamped so the two never exceed its length. */
 export function setClipFade(
   p: Project,
@@ -351,7 +358,7 @@ export function makeClipFromMedia(
   };
   if (args.track.kind === 'audio') {
     if (media.kind !== 'audio') return undefined;
-    return { ...base, kind: 'audio', gain: 1 };
+    return { ...base, kind: 'audio', gain: 1, duck: false };
   }
   // video track accepts images and videos
   if (media.kind === 'audio') return undefined;
