@@ -11,6 +11,7 @@ import {
   useSelectedClip,
   useSelectedTextEffect,
   useSelectedCaption,
+  useSelectedShape,
 } from '../store/editorStore';
 import { framesToSeconds, secondsToFrames } from '../core/time';
 
@@ -263,6 +264,56 @@ function CaptionEditor() {
   );
 }
 
+function ShapeEditor() {
+  const shape = useSelectedShape();
+  const project = useEditor((s) => s.project);
+  const update = useEditor((s) => s.updateShape);
+  if (!shape) return null;
+  const durationSeconds = framesToSeconds(shape.timing.duration, project.fps);
+  return (
+    <div className="inspector__group">
+      <h3>Shape</h3>
+      <label className="field">
+        <span>Color</span>
+        <input
+          type="color"
+          value={shape.color}
+          onChange={(e) => update(shape.id, { color: e.target.value })}
+        />
+      </label>
+      <label className="field">
+        <span>Opacity ({Math.round(shape.opacity * 100)}%)</span>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={shape.opacity}
+          onChange={(e) => update(shape.id, { opacity: Number(e.target.value) })}
+        />
+      </label>
+      <label className="field">
+        <span>Duration (s)</span>
+        <input
+          type="number"
+          min={0.1}
+          step={0.1}
+          value={durationSeconds.toFixed(1)}
+          onChange={(e) =>
+            update(shape.id, {
+              timing: {
+                start: shape.timing.start,
+                duration: Math.max(1, secondsToFrames(Number(e.target.value), project.fps)),
+              },
+            })
+          }
+        />
+      </label>
+      <p className="inspector__hint">Drag on the preview to move; drag a corner to resize.</p>
+    </div>
+  );
+}
+
 function OverlaysList() {
   const effects = useEditor((s) => s.project.effects);
   const selectEffect = useEditor((s) => s.selectEffect);
@@ -276,8 +327,12 @@ function OverlaysList() {
         {list.map((e) => (
           <li key={e.id} className="overlays__item">
             <button className="overlays__select" onClick={() => selectEffect(e.id)}>
-              <span className="overlays__type">{e.type === 'caption' ? 'CC' : 'T'}</span>
-              <span className="overlays__text">{e.text || '(empty)'}</span>
+              <span className="overlays__type">
+                {e.type === 'caption' ? 'CC' : e.type === 'shape' ? '▭' : 'T'}
+              </span>
+              <span className="overlays__text">
+                {e.type === 'shape' ? 'Shape' : e.text || '(empty)'}
+              </span>
             </button>
             <button
               className="overlays__delete"
@@ -331,6 +386,7 @@ function ProjectEditor() {
 export function Inspector() {
   const text = useSelectedTextEffect();
   const caption = useSelectedCaption();
+  const shape = useSelectedShape();
   const clip = useSelectedClip();
 
   return (
@@ -339,6 +395,8 @@ export function Inspector() {
         <TextEffectEditor />
       ) : caption ? (
         <CaptionEditor />
+      ) : shape ? (
+        <ShapeEditor />
       ) : clip ? (
         <ClipEditor />
       ) : (

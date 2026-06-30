@@ -68,7 +68,18 @@ export interface CaptionLayer {
   color: string;
 }
 
-export type SceneLayer = ImageLayer | TextLayer | CaptionLayer;
+export interface ShapeLayer {
+  kind: 'shape';
+  effectId: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+  opacity: number;
+}
+
+export type SceneLayer = ImageLayer | TextLayer | CaptionLayer | ShapeLayer;
 
 export interface Scene {
   width: number;
@@ -125,6 +136,17 @@ export function buildScene(project: Project, frame: Frames, resolve: ResolveMedi
         fontSize: effect.fontSize,
         fontFamily: effect.fontFamily,
         color: effect.color,
+      });
+    } else if (effect.type === 'shape') {
+      layers.push({
+        kind: 'shape',
+        effectId: effect.id,
+        x: effect.x,
+        y: effect.y,
+        width: effect.width,
+        height: effect.height,
+        color: effect.color,
+        opacity: effect.opacity,
       });
     }
   }

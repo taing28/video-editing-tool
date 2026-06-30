@@ -314,6 +314,48 @@ try {
     'transcribed caption text inserted',
   );
 
+  log('STEP 13e — shape overlay + drag on the preview');
+  await page.click('button:has-text("Shape")');
+  const shapeId = await page.evaluate(() => window.__editor.getState().selectedEffectId);
+  assert(
+    await page.evaluate(
+      (id) => window.__editor.getState().project.effects[id]?.type === 'shape',
+      shapeId,
+    ),
+    'shape effect added + selected',
+  );
+  const shapeXBefore = await page.evaluate(
+    (id) => window.__editor.getState().project.effects[id].x,
+    shapeId,
+  );
+  const shapeGrab = await page.evaluate((id) => {
+    const ed = window.__editor.getState();
+    const sh = ed.project.effects[id];
+    const r = document.querySelector('.preview canvas').getBoundingClientRect();
+    const s = r.width / ed.project.width;
+    return { x: r.left + (sh.x + sh.width / 2) * s, y: r.top + (sh.y + sh.height / 2) * s };
+  }, shapeId);
+  await page.mouse.move(shapeGrab.x, shapeGrab.y);
+  await page.mouse.down();
+  await page.mouse.move(shapeGrab.x + 60, shapeGrab.y, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(120);
+  const shapeXAfter = await page.evaluate(
+    (id) => window.__editor.getState().project.effects[id].x,
+    shapeId,
+  );
+  assert(shapeXAfter > shapeXBefore + 5, `shape dragged right (${shapeXBefore} -> ${shapeXAfter})`);
+
+  log('STEP 13f — lower third adds a shape + text together');
+  const effBefore = await page.evaluate(
+    () => Object.keys(window.__editor.getState().project.effects).length,
+  );
+  await page.click('button:has-text("Lower third")');
+  const effAfter = await page.evaluate(
+    () => Object.keys(window.__editor.getState().project.effects).length,
+  );
+  assert(effAfter === effBefore + 2, `lower third added a shape + text (${effBefore} -> ${effAfter})`);
+
   log('STEP 14 — cross-dissolve transition between the two video clips');
   await page.locator('.lane--video .clip').nth(1).click(); // select the 2nd (later) clip
   await page.waitForSelector('button:has-text("Cross-dissolve")');

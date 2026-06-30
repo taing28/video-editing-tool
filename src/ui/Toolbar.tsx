@@ -31,6 +31,8 @@ export function Toolbar() {
   const remove = useEditor((s) => s.removeSelected);
   const addText = useEditor((s) => s.addTextEffect);
   const addCaption = useEditor((s) => s.addCaption);
+  const addShape = useEditor((s) => s.addShape);
+  const addLowerThird = useEditor((s) => s.addLowerThird);
   const autoCaption = useEditor((s) => s.autoCaption);
   const isTranscribing = useEditor((s) => s.isTranscribing);
   const hasSelection = useEditor((s) => Boolean(s.selectedClipId || s.selectedEffectId));
@@ -92,6 +94,12 @@ export function Toolbar() {
           title="Transcribe the audio into captions (on-device)"
         >
           ✨ Auto-caption
+        </button>
+        <button className="btn" onClick={addShape} title="Add a rectangle / color block">
+          ▭ Shape
+        </button>
+        <button className="btn" onClick={addLowerThird} title="Add a lower-third bar + text">
+          ▬ Lower third
         </button>
       </div>
 

@@ -48,6 +48,9 @@ npm run build      # typecheck + production build
   inspector re-selects any text/caption.
 - **Auto-captions** — transcribe the audio **on-device** (Whisper via transformers.js, no
   upload) into timed captions. The ~60 MB model is lazy-loaded only on first use.
+- **Shape overlays** (rectangles / color blocks) — drag/resize on the preview; plus a one-click
+  **Lower third** (bar + text). (Shapes are a 3rd effect type — the effect model is fully
+  extensible.)
 - **Export to a real video file** — an **export dialog** picks resolution (Full/75%/50%),
   quality (High/Medium/Low), and format (Auto/MP4/WebM); **Cancel** mid-export. H.264 MP4
   (falls back to VP9/VP8 WebM), with all audio tracks mixed down via `OfflineAudioContext`.
@@ -123,7 +126,8 @@ src/
 - ~~**Phase 9 — Captions**~~ ✅ done: caption effect (2nd effect type) + overlays list.
 - ~~**Phase 10 — Auto-captions**~~ ✅ done: on-device Whisper transcription → timed captions.
 - ~~**Phase 11 — Speed control**~~ ✅ done: per-clip 0.25×–4× for video & audio.
-- **Phase 12 — More effects:** lower-thirds, transition styles, export presets.
+- ~~**Phase 12 — Shapes & lower-thirds**~~ ✅ done: rectangle effect (3rd type) + lower-third.
+- **Phase 13 — More effects:** transition styles (wipe/slide), platform export presets, stickers.
 - **Later — Scale:** move render+encode into a Web Worker (note: `OfflineAudioContext` +
   `<video>` seeking are main-thread-only, so this mainly helps pure image+audio projects).
 - Optional: wrap in Electron + mediabunny's server backend for native-speed export.

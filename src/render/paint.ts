@@ -31,6 +31,11 @@ export function paintScene(
       layer.text.split('\n').forEach((line, i) => {
         ctx.fillText(line, layer.x, layer.y + i * lineHeight);
       });
+    } else if (layer.kind === 'shape') {
+      ctx.globalAlpha = layer.opacity;
+      ctx.fillStyle = layer.color;
+      ctx.fillRect(layer.x, layer.y, layer.width, layer.height);
+      ctx.globalAlpha = 1;
     } else {
       // Caption: centered, bottom-anchored, outlined for readability.
       const lineHeight = layer.fontSize * 1.2;

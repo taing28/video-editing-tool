@@ -14,6 +14,7 @@ import type {
   Clip,
   TextEffect,
   CaptionEffect,
+  ShapeEffect,
   Track,
   TrackKind,
   Transform,
@@ -123,7 +124,10 @@ export interface EditorState {
   // effects (text + captions)
   addTextEffect: () => void;
   addCaption: () => void;
+  addShape: () => void;
+  addLowerThird: () => void;
   updateTextEffect: (id: EffectId, patch: Partial<TextEffect>) => void;
+  updateShape: (id: EffectId, patch: Partial<ShapeEffect>) => void;
   removeEffect: (id: EffectId) => void;
   /** Transcribe the project audio (Whisper) into caption effects. */
   autoCaption: () => Promise<void>;
@@ -365,7 +369,64 @@ export const useEditor = create<EditorState>((set, get) => {
       set({ selectedEffectId: id, selectedClipId: null });
     },
 
+    addShape: () => {
+      const { project, playhead } = get();
+      const id = newEffectId();
+      const w = Math.round(project.width * 0.4);
+      const h = Math.round(project.height * 0.2);
+      const effect: ShapeEffect = {
+        id,
+        type: 'shape',
+        timing: { start: playhead, duration: secondsToFrames(3, project.fps) },
+        x: Math.round((project.width - w) / 2),
+        y: Math.round((project.height - h) / 2),
+        width: w,
+        height: h,
+        color: '#5b8cff',
+        opacity: 0.85,
+      };
+      commit((p) => insertEffect(p, effect));
+      set({ selectedEffectId: id, selectedClipId: null });
+    },
+
+    addLowerThird: () => {
+      const { project, playhead } = get();
+      const shapeId = newEffectId();
+      const textId = newEffectId();
+      const duration = secondsToFrames(3, project.fps);
+      const barY = Math.round(project.height * 0.78);
+      const barH = Math.round(project.height * 0.14);
+      const shape: ShapeEffect = {
+        id: shapeId,
+        type: 'shape',
+        timing: { start: playhead, duration },
+        x: 0,
+        y: barY,
+        width: project.width,
+        height: barH,
+        color: '#000000',
+        opacity: 0.55,
+      };
+      const text: TextEffect = {
+        id: textId,
+        type: 'text',
+        timing: { start: playhead, duration },
+        text: 'Lower third',
+        fontSize: Math.round(project.height / 24),
+        fontWeight: 700,
+        fontFamily: 'Inter, system-ui, sans-serif',
+        color: '#ffffff',
+        x: Math.round(project.width * 0.05),
+        y: barY + Math.round(barH * 0.28),
+        align: 'left',
+      };
+      // Shape first so it sits behind the text.
+      commit((p) => insertEffect(insertEffect(p, shape), text));
+      set({ selectedEffectId: textId, selectedClipId: null });
+    },
+
     updateTextEffect: (id, patch) => commit((p) => updateEffectEdit(p, id, patch)),
+    updateShape: (id, patch) => commit((p) => updateEffectEdit(p, id, patch)),
 
     removeEffect: (id) => {
       commit((p) => removeEffectEdit(p, id));
@@ -579,5 +640,14 @@ export function useSelectedCaption(): CaptionEffect | null {
     if (!s.selectedEffectId) return null;
     const e = s.project.effects[s.selectedEffectId];
     return e && e.type === 'caption' ? e : null;
+  });
+}
+
+/** Selector helper: the currently selected shape (or null). */
+export function useSelectedShape(): ShapeEffect | null {
+  return useEditor((s) => {
+    if (!s.selectedEffectId) return null;
+    const e = s.project.effects[s.selectedEffectId];
+    return e && e.type === 'shape' ? e : null;
   });
 }

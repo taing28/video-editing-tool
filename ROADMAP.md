@@ -46,10 +46,13 @@ and `src/**/*.test.ts` (Vitest).
   clip length (keeps the same source content); `sourceFrameAt`/trim/audio playbackRate are all
   speed-aware. (`setClipSpeed` in `src/core/edits.ts`.)
 
+- [x] **12 — Shapes & lower-thirds** — rectangle effect (3rd effect type) with drag/resize on
+  the preview + a one-click lower-third (bar + text). (`ShapeEffect` in `src/core/model.ts`.)
+
 ## Phases planned (pick any — not strictly ordered)
 
-- [ ] **12 — More overlays** — lower-thirds, shapes/boxes, stickers (extend the Effect union).
 - [ ] **13 — More transitions** — wipe / slide / fade-to-color between clips.
+- [ ] **Stickers** — image/emoji overlays (reuse the shape interaction + an image source).
 - [ ] **14 — Export presets** — one-click TikTok / Reels / YouTube / Square (sets aspect +
   resolution together).
 - [ ] **15 — Scale** — move render+encode into a Web Worker. NOTE: `OfflineAudioContext`

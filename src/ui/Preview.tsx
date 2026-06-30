@@ -16,7 +16,13 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Konva from 'konva';
 import { Stage, Layer, Rect, Image as KonvaImage, Text as KonvaText, Transformer } from 'react-konva';
 import { useEditor } from '../store/editorStore';
-import { buildScene, weightToFontStyle, type ImageLayer, type TextLayer } from '../render/scene';
+import {
+  buildScene,
+  weightToFontStyle,
+  type ImageLayer,
+  type TextLayer,
+  type ShapeLayer,
+} from '../render/scene';
 import { resolveMedia, getVideoElement } from '../media/registry';
 import { getActiveVideoClips, sourceFrameAt } from '../core/selectors';
 import type { ClipId, EffectId } from '../core/ids';
@@ -29,12 +35,14 @@ export function Preview() {
   const selectedEffectId = useEditor((s) => s.selectedEffectId);
   const setClipTransform = useEditor((s) => s.setClipTransform);
   const updateText = useEditor((s) => s.updateTextEffect);
+  const updateShape = useEditor((s) => s.updateShape);
 
   const boxRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const layerRef = useRef<Konva.Layer>(null);
   const imageRef = useRef<Konva.Image>(null);
   const textRef = useRef<Konva.Text>(null);
+  const shapeRef = useRef<Konva.Rect>(null);
   const trRef = useRef<Konva.Transformer>(null);
   const [box, setBox] = useState({ width: 0, height: 0 });
 
@@ -119,16 +127,25 @@ export function Preview() {
   const selText = scene.layers.find(
     (l): l is TextLayer => l.kind === 'text' && l.effectId === selectedEffectId,
   );
+  const selShape = scene.layers.find(
+    (l): l is ShapeLayer => l.kind === 'shape' && l.effectId === selectedEffectId,
+  );
 
   // Attach the transformer to whichever node is selected.
   useEffect(() => {
     const tr = trRef.current;
     if (!tr) return;
-    const node = selImage ? imageRef.current : selText ? textRef.current : null;
+    const node = selImage
+      ? imageRef.current
+      : selText
+        ? textRef.current
+        : selShape
+          ? shapeRef.current
+          : null;
     tr.nodes(node ? [node] : []);
     tr.forceUpdate();
     tr.getLayer()?.batchDraw();
-  }, [selImage, selText, scale]);
+  }, [selImage, selText, selShape, scale]);
 
   return (
     <div className="preview" ref={boxRef}>
@@ -138,7 +155,20 @@ export function Preview() {
           <Layer ref={layerRef} scaleX={scale} scaleY={scale} listening={false}>
             <Rect x={0} y={0} width={scene.width} height={scene.height} fill={scene.background} />
             {scene.layers.map((layer) => {
-              if (layer === selImage || layer === selText) return null;
+              if (layer === selImage || layer === selText || layer === selShape) return null;
+              if (layer.kind === 'shape') {
+                return (
+                  <Rect
+                    key={layer.effectId}
+                    x={layer.x}
+                    y={layer.y}
+                    width={layer.width}
+                    height={layer.height}
+                    fill={layer.color}
+                    opacity={layer.opacity}
+                  />
+                );
+              }
               if (layer.kind === 'image') {
                 return (
                   <KonvaImage
@@ -189,7 +219,7 @@ export function Preview() {
           </Layer>
 
           {/* interaction layer (screen-space) for the selected element */}
-          {(selImage || selText) && (
+          {(selImage || selText || selShape) && (
             <Layer>
               {selImage && (
                 <KonvaImage
@@ -254,6 +284,38 @@ export function Preview() {
                       x: Math.round(n.x() / scale),
                       y: Math.round(n.y() / scale),
                       fontSize: size,
+                    });
+                  }}
+                />
+              )}
+              {selShape && (
+                <Rect
+                  ref={shapeRef}
+                  x={selShape.x * scale}
+                  y={selShape.y * scale}
+                  width={selShape.width * scale}
+                  height={selShape.height * scale}
+                  fill={selShape.color}
+                  opacity={selShape.opacity}
+                  draggable
+                  onDragEnd={(e) => {
+                    const n = e.target;
+                    updateShape(selectedEffectId as EffectId, {
+                      x: Math.round(n.x() / scale),
+                      y: Math.round(n.y() / scale),
+                    });
+                  }}
+                  onTransformEnd={(e) => {
+                    const n = e.target;
+                    const w = Math.max(8, n.width() * n.scaleX());
+                    const h = Math.max(8, n.height() * n.scaleY());
+                    n.scaleX(1);
+                    n.scaleY(1);
+                    updateShape(selectedEffectId as EffectId, {
+                      x: Math.round(n.x() / scale),
+                      y: Math.round(n.y() / scale),
+                      width: Math.round(w / scale),
+                      height: Math.round(h / scale),
                     });
                   }}
                 />

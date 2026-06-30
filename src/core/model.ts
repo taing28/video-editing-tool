@@ -142,8 +142,19 @@ export interface CaptionEffect extends BaseEffect {
   color: string;
 }
 
+export interface ShapeEffect extends BaseEffect {
+  type: 'shape';
+  /** Box in project pixels. */
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+  opacity: number;
+}
+
 /** Union of all effect variants. Extend this as new effect types are added. */
-export type Effect = TextEffect | CaptionEffect;
+export type Effect = TextEffect | CaptionEffect | ShapeEffect;
 
 // ---------------------------------------------------------------------------
 // Tracks & Project
