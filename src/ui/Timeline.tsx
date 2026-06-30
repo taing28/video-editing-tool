@@ -228,8 +228,6 @@ export function Timeline() {
   const pxPerFrame = useEditor((s) => s.pxPerFrame);
   const setPlayhead = useEditor((s) => s.setPlayhead);
   const selectClip = useEditor((s) => s.selectClip);
-  const snappingEnabled = useEditor((s) => s.snappingEnabled);
-  const toggleSnapping = useEditor((s) => s.toggleSnapping);
 
   const contentRef = useRef<HTMLDivElement>(null);
   const tracks = getTracksInOrder(project);
@@ -247,15 +245,6 @@ export function Timeline() {
 
   return (
     <section className="timeline">
-      <div className="timeline__toolbar">
-        <button
-          className={`tl-toggle${snappingEnabled ? ' is-on' : ''}`}
-          onClick={toggleSnapping}
-          data-tip="Snapping: when ON, dragging a clip makes its edges stick to other clips, the playhead and the start — so no tiny gaps. Turn OFF for free placement."
-        >
-          🧲 Snap {snappingEnabled ? 'on' : 'off'}
-        </button>
-      </div>
       <div className="timeline__scroll">
         <div
           className="timeline__content"

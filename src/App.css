@@ -18,15 +18,322 @@
 
 .app {
   display: grid;
-  /* minmax(0, …) lets the middle row shrink below its content so a tall preview
-     stage can't push the timeline off-screen. */
-  grid-template-rows: 52px minmax(0, 1fr) 300px;
+  /* header · editor middle · action bar · timeline. minmax(0,…) lets the middle
+     row shrink below its content so a tall preview stage can't push the rest off. */
+  grid-template-rows: 48px minmax(0, 1fr) 46px 250px;
   height: 100%;
   width: 100%;
   background: var(--bg);
   color: var(--text);
   font: 13px/1.4 Inter, system-ui, -apple-system, sans-serif;
   overflow: hidden;
+}
+
+/* ---- slim header ---- */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.header__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.header__logo {
+  font-size: 17px;
+}
+.header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---- editor action bar (above the timeline) ---- */
+.editbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.editbar__group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.editbar__group--right {
+  margin-left: auto;
+}
+.editbar__sep {
+  width: 1px;
+  height: 22px;
+  background: var(--line);
+  margin: 0 4px;
+}
+.iconbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 6px 9px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.iconbtn:hover:not(:disabled) {
+  background: var(--panel-2);
+  border-color: var(--line);
+}
+.iconbtn:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+.iconbtn--play {
+  background: var(--panel-2);
+  border-color: var(--line);
+  width: 34px;
+  justify-content: center;
+  font-size: 13px;
+}
+
+/* ---- left dock: icon rail + panel ---- */
+.dock {
+  display: flex;
+  height: 100%;
+  flex: 0 0 auto;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+}
+.dock__rail {
+  width: 64px;
+  flex: 0 0 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 6px;
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+}
+.dock-rail__btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 2px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.dock-rail__btn:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+.dock-rail__btn.is-active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.dock-rail__icon {
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 700;
+}
+.dock-rail__label {
+  font-size: 10px;
+}
+.dock__panel {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.dock__panel-head {
+  padding: 12px 12px 8px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.dock__panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden auto;
+}
+.dock__resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -4px;
+  width: 9px;
+  z-index: 4;
+  cursor: col-resize;
+  touch-action: none;
+}
+.dock__resize::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.dock__resize:hover::after,
+.dock.is-dragging .dock__resize::after {
+  background: var(--accent);
+}
+
+/* dock panel content */
+.panel-pad {
+  padding: 4px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.panel-add {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 11px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+.panel-add:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.panel-add:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.panel-add__big {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 7px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-weight: 700;
+}
+.panel-hint {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+.panel-subhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.sticker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.sticker {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.sticker:hover {
+  border-color: var(--accent);
+}
+.aspect-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.aspect-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--text);
+  padding: 9px 11px;
+  font: inherit;
+  cursor: pointer;
+}
+.aspect-item:hover {
+  border-color: var(--accent);
+}
+.aspect-item.is-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.aspect-item__dim {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* ---- inspector empty state + section titles + help links ---- */
+.inspector__empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 38px 14px;
+}
+.inspector__empty-icon {
+  font-size: 26px;
+  opacity: 0.5;
+}
+.inspector__empty-title {
+  color: var(--text);
+  font-weight: 600;
+  margin: 10px 0 6px;
+}
+.inspector__empty-sub {
+  font-size: 12px;
+  margin: 0;
+}
+.inspector__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.help-link {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.help-link:hover {
+  color: var(--text);
+  border-color: var(--accent);
 }
 
 /* ---- toolbar ---- */

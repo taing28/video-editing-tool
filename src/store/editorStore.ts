@@ -142,6 +142,8 @@ export interface EditorState {
 
   // effects (text + captions)
   addTextEffect: () => void;
+  /** Add an emoji "sticker" as a large text overlay, centered. */
+  addSticker: (emoji: string) => void;
   addCaption: () => void;
   addShape: () => void;
   addLowerThird: () => void;
@@ -389,6 +391,27 @@ export const useEditor = create<EditorState>((set, get) => {
         color: '#ffffff',
         x: Math.round(project.width * 0.12),
         y: Math.round(project.height * 0.44),
+        align: 'left',
+      };
+      commit((p) => insertEffect(p, effect));
+      set({ selectedEffectId: id, selectedClipId: null });
+    },
+
+    addSticker: (emoji) => {
+      const { project, playhead } = get();
+      const id = newEffectId();
+      const size = Math.round(project.height / 4);
+      const effect: TextEffect = {
+        id,
+        type: 'text',
+        timing: { start: playhead, duration: secondsToFrames(3, project.fps) },
+        text: emoji,
+        fontSize: size,
+        fontWeight: 400,
+        fontFamily: 'Inter, system-ui, sans-serif',
+        color: '#ffffff',
+        x: Math.round(project.width / 2 - size / 2),
+        y: Math.round(project.height / 2 - size / 2),
         align: 'left',
       };
       commit((p) => insertEffect(p, effect));

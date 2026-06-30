@@ -56,7 +56,8 @@ try {
   await page.waitForSelector('.lane--video .clip');
   await page.dblclick('.media-card--audio');
   await page.waitForSelector('.lane--audio .clip');
-  await page.click('button:has-text("Add text")');
+  await page.click('[data-panel="text"]'); // open the Text panel in the left dock
+  await page.click('.dock button:has-text("Add text")');
   await page.waitForSelector('.inspector textarea');
   await page.fill('.inspector textarea', 'Persisted!');
 

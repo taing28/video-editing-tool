@@ -8,10 +8,40 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { searchGuide } from '../help/guide';
 
+const HELP_EVENT = 'open-help';
+
+/** Open the Help panel pre-filtered to a feature (used by inline "?" links). */
+export function openHelp(query: string): void {
+  window.dispatchEvent(new CustomEvent(HELP_EVENT, { detail: query }));
+}
+
+/** A small "?" link that opens the Help guide focused on `topic`. */
+export function HelpLink({ topic }: { topic: string }) {
+  return (
+    <button
+      className="help-link"
+      onClick={() => openHelp(topic)}
+      data-tip={`What is "${topic}"? Open the guide.`}
+      aria-label={`Help: ${topic}`}
+    >
+      ?
+    </button>
+  );
+}
+
 export function HelpButton() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const results = useMemo(() => searchGuide(query), [query]);
+
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      setQuery((e as CustomEvent<string>).detail ?? '');
+      setOpen(true);
+    };
+    window.addEventListener(HELP_EVENT, onOpen);
+    return () => window.removeEventListener(HELP_EVENT, onOpen);
+  }, []);
 
   useEffect(() => {
     if (!open) return;

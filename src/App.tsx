@@ -13,10 +13,11 @@ import {
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import { Toolbar } from './ui/Toolbar';
+import { Header } from './ui/Header';
+import { EditorBar } from './ui/EditorBar';
+import { LeftDock } from './ui/LeftDock';
 import { Tooltip } from './ui/Tooltip';
 import { Sidebar } from './ui/Sidebar';
-import { MediaLibrary } from './ui/MediaLibrary';
 import { Preview } from './ui/Preview';
 import { Inspector } from './ui/Inspector';
 import { Timeline } from './ui/Timeline';
@@ -81,16 +82,15 @@ export default function App() {
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <div className="app">
-        <Toolbar />
+        <Header />
         <div className="app__middle">
-          <Sidebar side="left" storageKey="lib" label="media library" defaultWidth={240}>
-            <MediaLibrary />
-          </Sidebar>
+          <LeftDock />
           <Preview />
-          <Sidebar side="right" storageKey="insp" label="inspector" defaultWidth={260}>
+          <Sidebar side="right" storageKey="insp" label="properties" defaultWidth={264}>
             <Inspector />
           </Sidebar>
         </div>
+        <EditorBar />
         <Timeline />
       </div>
       <ExportDialog />

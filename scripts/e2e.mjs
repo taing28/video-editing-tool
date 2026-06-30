@@ -104,7 +104,8 @@ try {
   await page.goto(APP_URL, { waitUntil: 'networkidle' });
   await page.waitForSelector('.app');
   log('STEP 1 — app loads');
-  assert(await page.locator('.toolbar').count() === 1, 'toolbar present');
+  assert(await page.locator('.header').count() === 1, 'header present');
+  assert(await page.locator('.dock').count() === 1, 'left dock present');
   assert(await page.locator('.lane').count() === 2, 'video + audio lanes present');
 
   log('STEP 1b — sidebars collapse / expand / resize');
@@ -146,10 +147,10 @@ try {
   await page.waitForSelector('.help-card', { state: 'detached' });
   assert((await page.locator('.help-card').count()) === 0, 'help panel closes on Escape');
   // Hover an enabled control → a styled tooltip appears after the ~1s delay.
-  await page.hover('button:has-text("Add text")');
+  await page.hover('.tl-toggle'); // the Snap button (always visible, has a tip)
   await page.waitForSelector('.tooltip', { timeout: 3000 });
   const tipText = (await page.textContent('.tooltip')) || '';
-  assert(/text/i.test(tipText), `tooltip appears on hover ("${tipText.slice(0, 24)}…")`);
+  assert(/snap|stick/i.test(tipText), `tooltip appears on hover ("${tipText.slice(0, 24)}…")`);
   await page.mouse.move(4, 4); // move away
   await page.waitForTimeout(150);
   assert((await page.locator('.tooltip').count()) === 0, 'tooltip hides on mouse-out');
@@ -269,13 +270,14 @@ try {
   assert((await clipCount(page, 'video')) === 2, 'split produced two video clips');
 
   log('STEP 7 — undo / redo');
-  await page.click('button:has-text("Undo")'); // undo split
+  await page.click('[aria-label="Undo"]'); // undo split
   assert((await clipCount(page, 'video')) === 1, 'undo reverted the split');
-  await page.click('button:has-text("Redo")'); // redo split
+  await page.click('[aria-label="Redo"]'); // redo split
   assert((await clipCount(page, 'video')) === 2, 'redo re-applied the split');
 
   log('STEP 8 — add text overlay + edit');
-  await page.click('button:has-text("Add text")');
+  await page.click('[data-panel="text"]'); // open the Text panel in the left dock
+  await page.click('.dock button:has-text("Add text")');
   await page.waitForSelector('.inspector textarea');
   assert((await page.locator('.inspector textarea').count()) === 1, 'text inspector opened');
   await page.fill('.inspector textarea', 'Hello world');
@@ -329,10 +331,10 @@ try {
   assert(tc1 !== tc0, `timecode changed on scrub (${tc0} -> ${tc1})`);
 
   log('STEP 10 — play advances, pause stops');
-  await page.click('button:has-text("Play")');
+  await page.click('.iconbtn--play');
   await page.waitForTimeout(500);
   const tcPlaying = await page.textContent('.toolbar__time');
-  await page.click('button:has-text("Pause")');
+  await page.click('.iconbtn--play');
   assert(tcPlaying !== tc1, `playhead advanced while playing (${tc1} -> ${tcPlaying})`);
   const tcAfterPause = await page.textContent('.toolbar__time');
   await page.waitForTimeout(300);
@@ -347,20 +349,18 @@ try {
     `audio track added (${lanesBefore} -> ${lanesBefore + 1} lanes)`,
   );
 
-  log('STEP 12 — aspect-ratio preset 9:16');
-  await page.selectOption('.toolbar__select', '1080x1920');
-  await page.waitForFunction(
-    () => document.querySelector('.toolbar__select')?.value === '1080x1920',
-  );
-  assert(
-    (await page.inputValue('.toolbar__select')) === '1080x1920',
-    'canvas switched to 9:16 (1080x1920)',
-  );
+  log('STEP 12 — aspect-ratio preset 9:16 (Settings panel)');
+  await page.click('[data-panel="settings"]'); // open Settings panel in the left dock
+  await page.click('.aspect-item:has-text("Vertical")'); // 9:16 · 1080×1920
+  await page.waitForFunction(() => window.__editor.getState().project.width === 1080);
+  const canvas = await page.evaluate(() => {
+    const p = window.__editor.getState().project;
+    return `${p.width}x${p.height}`;
+  });
+  assert(canvas === '1080x1920', `canvas switched to 9:16 (${canvas})`);
 
-  log('STEP 13 — project background color');
-  await page.evaluate(() => window.__editor.getState().selectClip(null));
-  await page.waitForSelector('.inspector input[type=color]');
-  await page.locator('.inspector input[type=color]').evaluate((el) => {
+  log('STEP 13 — project background color (Settings panel)');
+  await page.locator('.dock input[type=color]').evaluate((el) => {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
     setter.call(el, '#3366ff');
     el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -369,7 +369,8 @@ try {
   assert(bg === '#3366ff', `background color set (${bg})`);
 
   log('STEP 13b — add + edit a caption');
-  await page.click('button:has-text("CC Caption")');
+  await page.click('[data-panel="captions"]'); // open Captions panel
+  await page.click('.dock button:has-text("Add caption")');
   const capId = await page.evaluate(() => window.__editor.getState().selectedEffectId);
   assert(
     await page.evaluate(
@@ -414,7 +415,7 @@ try {
         ).length,
     );
   const capsBefore = await captionCount();
-  await page.click('button:has-text("Auto-caption")');
+  await page.click('.dock button:has-text("Auto-caption")'); // Captions panel is open
   await page.waitForFunction(
     (n) =>
       Object.values(window.__editor.getState().project.effects).filter((e) => e.type === 'caption')
@@ -430,7 +431,8 @@ try {
   );
 
   log('STEP 13e — shape overlay + drag on the preview');
-  await page.click('button:has-text("Shape")');
+  await page.click('[data-panel="elements"]'); // open the Elements panel
+  await page.click('.dock button:has-text("Shape")');
   const shapeId = await page.evaluate(() => window.__editor.getState().selectedEffectId);
   assert(
     await page.evaluate(
@@ -465,7 +467,7 @@ try {
   const effBefore = await page.evaluate(
     () => Object.keys(window.__editor.getState().project.effects).length,
   );
-  await page.click('button:has-text("Lower third")');
+  await page.click('.dock button:has-text("Lower third")'); // Elements panel is open
   const effAfter = await page.evaluate(
     () => Object.keys(window.__editor.getState().project.effects).length,
   );
@@ -569,10 +571,9 @@ try {
     'project renamed',
   );
 
-  log('STEP 17 — fps change (project inspector)');
-  await page.evaluate(() => window.__editor.getState().selectClip(null));
-  await page.waitForSelector('.inspector select');
-  await page.selectOption('.inspector select', '60');
+  log('STEP 17 — fps change (Settings panel)');
+  await page.click('[data-panel="settings"]'); // open Settings panel
+  await page.selectOption('.dock select', '60'); // the only select in Settings is fps
   assert(
     (await page.evaluate(() => window.__editor.getState().project.fps)) === 60,
     'fps set to 60',
@@ -636,7 +637,7 @@ try {
   await page.goto(APP_URL, { waitUntil: 'networkidle' });
   await page.waitForSelector('.app');
   assert((await page.locator('.media-card').count()) === 0, 'reloaded app starts empty');
-  await page.setInputFiles('.toolbar input[type=file]', savePath);
+  await page.setInputFiles('.header input[type=file]', savePath);
   await page.waitForFunction(
     (n) => Object.keys(window.__editor.getState().project.media).length === n,
     before.media,
@@ -662,7 +663,7 @@ try {
   const mediaBeforeBad = await page.evaluate(
     () => Object.keys(window.__editor.getState().project.media).length,
   );
-  await page.setInputFiles('.toolbar input[type=file]', pngPath); // a PNG, not a bundle
+  await page.setInputFiles('.header input[type=file]', pngPath); // a PNG, not a bundle
   await page.waitForTimeout(300);
   const mediaAfterBad = await page.evaluate(
     () => Object.keys(window.__editor.getState().project.media).length,
@@ -673,6 +674,8 @@ try {
   );
 
   log('STEP 20 — delete media removes its clips');
+  await page.click('[data-panel="media"]'); // re-open the Media panel to reach the cards
+  await page.waitForSelector('.media-card--image');
   const beforeMedia = await page.evaluate(
     () => Object.keys(window.__editor.getState().project.media).length,
   );

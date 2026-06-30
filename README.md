@@ -73,7 +73,11 @@ npm run build      # typecheck + production build
 - **Collapsible, resizable side panels** — drag the inner edge to resize, click the ‹/› tab to
   slide a panel away; widths persist. Inspector fields wrap instead of overflowing; no scrollbars.
 - **Help & tooltips** — hover any control for ~1s to get a plain-language tooltip, or click the
-  **?** button for a searchable guide (what each feature is + how to use it).
+  **?** button for a searchable guide (what each feature is + how to use it). Inspector sections
+  have inline **?** links that jump to that feature's guide entry.
+- **Workspace layout** — a slim header (project name + Save/Open/Export/Help), a left **icon dock**
+  (Media, Text, Captions, Elements/stickers, Adjust, Settings), the preview, a right properties
+  panel, and a timeline action bar (play, split, duplicate, delete, +tracks, snap, zoom).
 - Undo/redo, keyboard shortcuts (Space, ⌘/Ctrl+Z, ⌘/Ctrl+D to duplicate, Delete, S to split).
 
 **Not yet wired:** auto-transcription (Whisper) to fill the caption track; speed control;

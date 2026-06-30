@@ -31,6 +31,15 @@ and `src/**/*.test.ts` (Vitest).
   `grid-template-rows: … minmax(0,1fr) …`, `.preview { overflow:hidden; min-height:0; padding:0 }`,
   and a 0.96 fit factor on the stage scale. Collapse toggle is now a taller, centered edge tab.
 
+### Workspace refactor (user feedback)
+- Moved the cramped all-in-header layout to: slim **Header** (name + Save/Open/Export/Help),
+  a left **icon dock** (`ui/LeftDock.tsx`: Media/Text/Captions/Elements/Adjust/Settings panels,
+  switchable + resizable), the **Preview**, a right properties **Inspector** (selected element
+  only; project settings moved into the dock's Settings panel), and an **EditorBar** action row
+  above the timeline (play, undo/redo, split, duplicate, delete, +tracks, snap, zoom).
+- Added emoji **stickers** (`addSticker`) in the Elements panel; inline **?** help links jump to a
+  feature's guide entry (`openHelp`/`HelpLink`). The whole e2e was rewired to open dock panels.
+
 ### Help & tooltips (user feedback)
 - **Hover tooltips** — one global `ui/Tooltip.tsx` driven by `data-tip` attributes; a styled
   bubble appears ~1s after the pointer rests on a control. Added `data-tip` to the confusing

@@ -43,7 +43,8 @@ try {
   await page.waitForSelector('.lane--audio .clip');
 
   log('Clicking Auto-caption (real Whisper — downloading model, please wait)…');
-  await page.click('button:has-text("Auto-caption")');
+  await page.click('[data-panel="captions"]'); // open Captions panel in the left dock
+  await page.click('.dock button:has-text("Auto-caption")');
 
   const deadline = Date.now() + 220_000;
   let done = false;

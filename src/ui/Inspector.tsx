@@ -16,6 +16,7 @@ import {
 import { framesToSeconds, secondsToFrames } from '../core/time';
 import type { TransitionType, KenBurns } from '../core/model';
 import type { EffectId } from '../core/ids';
+import { HelpLink } from './HelpDialog';
 
 /** Fade in/out (seconds) for a timed overlay — shared by text/caption/shape. */
 function OverlayFadeFields({
@@ -71,7 +72,9 @@ function TextEffectEditor() {
 
   return (
     <div className="inspector__group">
-      <h3>Text overlay</h3>
+      <h3 className="inspector__title">
+        Text overlay <HelpLink topic="Text overlay" />
+      </h3>
       <label className="field">
         <span>Text</span>
         <textarea
@@ -164,7 +167,9 @@ function ClipEditor() {
 
   return (
     <div className="inspector__group">
-      <h3>Clip</h3>
+      <h3 className="inspector__title">
+        Clip <HelpLink topic="Trim" />
+      </h3>
       <p className="inspector__row">{media?.name ?? clip.mediaId}</p>
       <p className="inspector__row">
         start {clip.startFrame}f · {clip.durationInFrames}f
@@ -407,7 +412,9 @@ function CaptionEditor() {
   const durationSeconds = framesToSeconds(caption.timing.duration, project.fps);
   return (
     <div className="inspector__group">
-      <h3>Caption</h3>
+      <h3 className="inspector__title">
+        Caption <HelpLink topic="Caption" />
+      </h3>
       <label className="field">
         <span>Text</span>
         <textarea
@@ -472,7 +479,9 @@ function ShapeEditor() {
   const durationSeconds = framesToSeconds(shape.timing.duration, project.fps);
   return (
     <div className="inspector__group">
-      <h3>Shape</h3>
+      <h3 className="inspector__title">
+        Shape <HelpLink topic="Shape" />
+      </h3>
       <label className="field">
         <span>Color</span>
         <input
@@ -556,45 +565,13 @@ function OverlaysList() {
   );
 }
 
-function ProjectEditor() {
-  const project = useEditor((s) => s.project);
-  const setBackground = useEditor((s) => s.setBackground);
-  const setFps = useEditor((s) => s.setFps);
-  return (
-    <div className="inspector__group">
-      <h3>Project</h3>
-      <p className="inspector__row">{project.name}</p>
-      <p className="inspector__row">
-        {project.width}×{project.height}
-      </p>
-      <label className="field">
-        <span>Frame rate</span>
-        <select value={project.fps} onChange={(e) => setFps(Number(e.target.value))}>
-          {[24, 25, 30, 50, 60].map((f) => (
-            <option key={f} value={f}>
-              {f} fps
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="field">
-        <span>Background</span>
-        <input
-          type="color"
-          value={project.background ?? '#000000'}
-          onChange={(e) => setBackground(e.target.value)}
-        />
-      </label>
-      <p className="inspector__hint">Select a clip or text overlay to edit it.</p>
-    </div>
-  );
-}
-
 export function Inspector() {
   const text = useSelectedTextEffect();
   const caption = useSelectedCaption();
   const shape = useSelectedShape();
   const clip = useSelectedClip();
+
+  const hasOverlays = useEditor((s) => Object.keys(s.project.effects).length > 0);
 
   return (
     <aside className="inspector">
@@ -608,8 +585,15 @@ export function Inspector() {
         <ClipEditor />
       ) : (
         <>
-          <ProjectEditor />
-          <OverlaysList />
+          <div className="inspector__empty">
+            <div className="inspector__empty-icon">⚙</div>
+            <p className="inspector__empty-title">Nothing selected</p>
+            <p className="inspector__empty-sub">
+              Click a clip or overlay on the timeline to edit its properties. Project size and
+              background live in the Settings panel (left).
+            </p>
+          </div>
+          {hasOverlays && <OverlaysList />}
         </>
       )}
     </aside>

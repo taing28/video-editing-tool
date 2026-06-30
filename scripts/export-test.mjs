@@ -54,7 +54,8 @@ try {
   await page.waitForSelector('.lane--video .clip');
   await page.dblclick('.media-card--audio');
   await page.waitForSelector('.lane--audio .clip');
-  await page.click('button:has-text("CC Caption")'); // exercise caption render in export
+  await page.click('[data-panel="captions"]'); // open Captions panel in the left dock
+  await page.click('.dock button:has-text("Add caption")'); // exercise caption render in export
   assert(true, 'image on video track + audio on audio track + caption');
 
   log('Export (via dialog, at 50% resolution)');
