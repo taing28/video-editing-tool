@@ -69,7 +69,13 @@ export function removeMedia(p: Project, mediaId: MediaId): Project {
       };
     }
   }
-  return recompute({ ...p, media, clips, tracks });
+  // Image overlays reference media too — drop any that point at this asset so
+  // we don't leave a dangling reference behind.
+  const effects = { ...p.effects };
+  for (const eff of Object.values(p.effects)) {
+    if (eff.type === 'image' && eff.mediaId === mediaId) delete effects[eff.id];
+  }
+  return recompute({ ...p, media, clips, tracks, effects });
 }
 
 // --- clips ------------------------------------------------------------------
@@ -462,6 +468,7 @@ export function duplicateEffect(p: Project, effectId: EffectId, newId: EffectId)
   let copy: Effect;
   if (eff.type === 'text') copy = { ...eff, id: newId, x: eff.x + 20, y: eff.y + 20 };
   else if (eff.type === 'shape') copy = { ...eff, id: newId, x: eff.x + 20, y: eff.y + 20 };
+  else if (eff.type === 'image') copy = { ...eff, id: newId, x: eff.x + 20, y: eff.y + 20 };
   else copy = { ...eff, id: newId };
   return { ...p, effects: { ...p.effects, [newId]: copy } };
 }

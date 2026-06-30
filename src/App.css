@@ -263,6 +263,41 @@
 .sticker:hover {
   border-color: var(--accent);
 }
+
+/* Image-overlay picker (Elements panel) — pick a library image to drop on top. */
+.overlay-img-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.overlay-img {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+}
+.overlay-img:hover {
+  border-color: var(--accent);
+}
+.overlay-img img {
+  width: 100%;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #000;
+}
+.overlay-img__name {
+  font-size: 10px;
+  color: #aab;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .aspect-list {
   display: flex;
   flex-direction: column;

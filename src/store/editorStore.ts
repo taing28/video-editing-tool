@@ -15,6 +15,7 @@ import type {
   TextEffect,
   CaptionEffect,
   ShapeEffect,
+  ImageEffect,
   Track,
   TrackKind,
   Transform,
@@ -23,7 +24,7 @@ import type {
   ColorAdjust,
   FitMode,
 } from '../core/model';
-import { createEmptyProject, getTrack } from '../core/model';
+import { createEmptyProject, getTrack, containedBox } from '../core/model';
 import type { ClipId, EffectId, MediaId, TrackId } from '../core/ids';
 import { newClipId, newEffectId, newTrackId } from '../core/ids';
 import type { Frames } from '../core/time';
@@ -154,8 +155,11 @@ export interface EditorState {
   addCaption: () => void;
   addShape: () => void;
   addLowerThird: () => void;
+  /** Add an image overlay (e.g. a character cut-out) from a library image asset. */
+  addImageOverlay: (mediaId: MediaId) => void;
   updateTextEffect: (id: EffectId, patch: Partial<TextEffect>) => void;
   updateShape: (id: EffectId, patch: Partial<ShapeEffect>) => void;
+  updateImageOverlay: (id: EffectId, patch: Partial<ImageEffect>) => void;
   removeEffect: (id: EffectId) => void;
   /** Transcribe the project audio (Whisper) into caption effects. */
   autoCaption: () => Promise<void>;
@@ -503,8 +507,38 @@ export const useEditor = create<EditorState>((set, get) => {
       set({ selectedEffectId: textId, selectedClipId: null });
     },
 
+    addImageOverlay: (mediaId) => {
+      const { project, playhead } = get();
+      const media = project.media[mediaId];
+      if (!media || media.kind !== 'image') return;
+      const id = newEffectId();
+      // Start at 60% of a contained fit so it reads as an overlay, not a fill.
+      const fit = containedBox(
+        media.width ?? project.width,
+        media.height ?? project.height,
+        project.width,
+        project.height,
+      );
+      const width = Math.round(fit.width * 0.6);
+      const height = Math.round(fit.height * 0.6);
+      const effect: ImageEffect = {
+        id,
+        type: 'image',
+        timing: { start: playhead, duration: secondsToFrames(3, project.fps) },
+        mediaId,
+        x: Math.round((project.width - width) / 2),
+        y: Math.round((project.height - height) / 2),
+        width,
+        height,
+        opacity: 1,
+      };
+      commit((p) => insertEffect(p, effect));
+      set({ selectedEffectId: id, selectedClipId: null });
+    },
+
     updateTextEffect: (id, patch) => commit((p) => updateEffectEdit(p, id, patch)),
     updateShape: (id, patch) => commit((p) => updateEffectEdit(p, id, patch)),
+    updateImageOverlay: (id, patch) => commit((p) => updateEffectEdit(p, id, patch)),
 
     removeEffect: (id) => {
       commit((p) => removeEffectEdit(p, id));
@@ -750,5 +784,14 @@ export function useSelectedShape(): ShapeEffect | null {
     if (!s.selectedEffectId) return null;
     const e = s.project.effects[s.selectedEffectId];
     return e && e.type === 'shape' ? e : null;
+  });
+}
+
+/** Selector helper: the currently selected image overlay (or null). */
+export function useSelectedImageEffect(): ImageEffect | null {
+  return useEditor((s) => {
+    if (!s.selectedEffectId) return null;
+    const e = s.project.effects[s.selectedEffectId];
+    return e && e.type === 'image' ? e : null;
   });
 }

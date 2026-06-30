@@ -18,6 +18,7 @@ import {
   moveEffect,
   trimEffectStart,
   trimEffectEnd,
+  removeMedia,
 } from './edits';
 import {
   getTrackClips,
@@ -358,5 +359,38 @@ describe('overlay timing reducers (timeline lanes)', () => {
     expect(moveEffect(p, ghost, 10)).toBe(p);
     expect(trimEffectStart(p, ghost, 10)).toBe(p);
     expect(trimEffectEnd(p, ghost, 10)).toBe(p);
+  });
+});
+
+describe('removeMedia drops image overlays referencing it', () => {
+  it('removes the asset AND any image effect that points at it', () => {
+    let p = createEmptyProject({ fps: 30 });
+    const mediaId = newMediaId();
+    p = addMedia(p, {
+      id: mediaId,
+      kind: 'image',
+      name: 'char.png',
+      src: 'blob:x',
+      durationInFrames: 90,
+      width: 100,
+      height: 100,
+    });
+    const effId = newEffectId();
+    p = insertEffect(p, {
+      id: effId,
+      type: 'image',
+      timing: { start: 0, duration: 30 },
+      mediaId,
+      x: 0,
+      y: 0,
+      width: 50,
+      height: 50,
+      opacity: 1,
+    } as unknown as Effect);
+    expect(p.effects[effId]).toBeTruthy();
+
+    const after = removeMedia(p, mediaId);
+    expect(after.media[mediaId]).toBeUndefined();
+    expect(after.effects[effId]).toBeUndefined(); // dangling overlay cleaned up
   });
 });

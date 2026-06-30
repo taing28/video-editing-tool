@@ -92,7 +92,24 @@ export interface ShapeLayer {
   opacity: number;
 }
 
-export type SceneLayer = ImageLayer | TextLayer | CaptionLayer | ShapeLayer;
+/** An image overlay (e.g. a character cut-out) drawn on top of the clips. */
+export interface ImageOverlayLayer {
+  kind: 'imageOverlay';
+  effectId: string;
+  drawable: CanvasImageSource;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  opacity: number;
+}
+
+export type SceneLayer =
+  | ImageLayer
+  | TextLayer
+  | CaptionLayer
+  | ShapeLayer
+  | ImageOverlayLayer;
 
 export interface Scene {
   width: number;
@@ -193,6 +210,19 @@ export function buildScene(
         width: effect.width,
         height: effect.height,
         color: effect.color,
+        opacity: effect.opacity * fade,
+      });
+    } else if (effect.type === 'image') {
+      const media = resolve(effect.mediaId);
+      if (!media?.drawable) continue; // not loaded → skip this frame
+      layers.push({
+        kind: 'imageOverlay',
+        effectId: effect.id,
+        drawable: media.drawable,
+        x: effect.x,
+        y: effect.y,
+        width: effect.width,
+        height: effect.height,
         opacity: effect.opacity * fade,
       });
     }

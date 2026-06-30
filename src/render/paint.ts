@@ -63,6 +63,10 @@ export function paintScene(
       ctx.fillStyle = layer.color;
       ctx.fillRect(layer.x, layer.y, layer.width, layer.height);
       ctx.globalAlpha = 1;
+    } else if (layer.kind === 'imageOverlay') {
+      ctx.globalAlpha = layer.opacity;
+      ctx.drawImage(layer.drawable, layer.x, layer.y, layer.width, layer.height);
+      ctx.globalAlpha = 1;
     } else {
       // Caption: centered, bottom-anchored, outlined for readability.
       ctx.globalAlpha = layer.opacity;

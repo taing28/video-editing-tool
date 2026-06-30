@@ -496,6 +496,39 @@ try {
   );
   assert(effAfter === effBefore + 2, `lower third added a shape + text (${effBefore} -> ${effAfter})`);
 
+  log('STEP 13g — image overlay: add a library image on top + drag it on the preview');
+  await page.waitForSelector('.dock .overlay-img'); // Elements panel still open from 13f
+  await page.click('.dock .overlay-img'); // add the first library image as an overlay
+  await page.waitForFunction(
+    () => window.__editor.getState().project.effects[window.__editor.getState().selectedEffectId]?.type === 'image',
+  );
+  const imgEff = await page.evaluate(() => {
+    const ed = window.__editor.getState();
+    return ed.project.effects[ed.selectedEffectId];
+  });
+  assert(imgEff.type === 'image' && !!imgEff.mediaId, 'image overlay effect created with a media ref');
+  assert(
+    (await page.locator('.lane--overlay .clip--ov-image').count()) >= 1,
+    'image overlay has its own timeline lane',
+  );
+  const imgX0 = imgEff.x;
+  const grabImg = await page.evaluate(() => {
+    const ed = window.__editor.getState();
+    const e = ed.project.effects[ed.selectedEffectId];
+    const r = document.querySelector('.preview canvas').getBoundingClientRect();
+    const s = r.width / ed.project.width;
+    return { x: r.left + (e.x + e.width / 2) * s, y: r.top + (e.y + e.height / 2) * s };
+  });
+  await page.mouse.move(grabImg.x, grabImg.y);
+  await page.mouse.down();
+  await page.mouse.move(grabImg.x + 60, grabImg.y + 10, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(120);
+  const imgX1 = await page.evaluate(
+    () => window.__editor.getState().project.effects[window.__editor.getState().selectedEffectId].x,
+  );
+  assert(imgX1 > imgX0 + 3, `image overlay dragged on the preview (${imgX0} -> ${imgX1})`);
+
   log('STEP 14 — transition between the two video clips (overlap + wipe style)');
   await page.locator('.lane--video .clip').nth(1).click(); // select the 2nd (later) clip
   await page.waitForSelector('button:has-text("Add transition")');

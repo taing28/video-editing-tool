@@ -190,6 +190,9 @@ function ElementsPanel() {
   const addShape = useEditor((s) => s.addShape);
   const addLowerThird = useEditor((s) => s.addLowerThird);
   const addSticker = useEditor((s) => s.addSticker);
+  const addImageOverlay = useEditor((s) => s.addImageOverlay);
+  const media = useEditor((s) => s.project.media);
+  const imageMedia = Object.values(media).filter((m) => m.kind === 'image');
   return (
     <PanelSection>
       <button className="panel-add" onClick={addShape} data-tip="A colored rectangle / block (background bar or highlight).">
@@ -200,6 +203,29 @@ function ElementsPanel() {
         <span className="panel-add__big">▬</span>
         Lower third
       </button>
+      <div className="panel-subhead">Image overlay</div>
+      {imageMedia.length === 0 ? (
+        <p className="panel-hint">
+          Import an image in the Media panel, then add it here as an overlay (e.g. a character)
+          on top of your video.
+        </p>
+      ) : (
+        <div className="overlay-img-grid">
+          {imageMedia.map((m) => (
+            <button
+              key={m.id}
+              className="overlay-img"
+              onClick={() => addImageOverlay(m.id)}
+              data-tip="Add this image as a timed overlay on top of the video."
+              title={m.name}
+              aria-label={`Add ${m.name} as an image overlay`}
+            >
+              <img src={m.src} alt="" />
+              <span className="overlay-img__name">{m.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="panel-subhead">
         Stickers <HelpLink topic="Text overlay" />
       </div>

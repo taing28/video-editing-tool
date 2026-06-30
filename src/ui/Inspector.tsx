@@ -12,6 +12,7 @@ import {
   useSelectedTextEffect,
   useSelectedCaption,
   useSelectedShape,
+  useSelectedImageEffect,
 } from '../store/editorStore';
 import { framesToSeconds, secondsToFrames } from '../core/time';
 import type { TransitionType, KenBurns } from '../core/model';
@@ -531,6 +532,57 @@ function ShapeEditor() {
   );
 }
 
+function ImageEffectEditor() {
+  const effect = useSelectedImageEffect();
+  const project = useEditor((s) => s.project);
+  const update = useEditor((s) => s.updateImageOverlay);
+  if (!effect) return null;
+  const media = project.media[effect.mediaId];
+  const durationSeconds = framesToSeconds(effect.timing.duration, project.fps);
+  return (
+    <div className="inspector__group">
+      <h3 className="inspector__title">Image overlay</h3>
+      <p className="inspector__row">{media?.name ?? effect.mediaId}</p>
+      <label className="field">
+        <span>Opacity ({Math.round(effect.opacity * 100)}%)</span>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={effect.opacity}
+          onChange={(e) => update(effect.id, { opacity: Number(e.target.value) })}
+        />
+      </label>
+      <label className="field">
+        <span>Duration (s)</span>
+        <input
+          type="number"
+          min={0.1}
+          step={0.1}
+          value={durationSeconds.toFixed(1)}
+          onChange={(e) =>
+            update(effect.id, {
+              timing: {
+                start: effect.timing.start,
+                duration: Math.max(1, secondsToFrames(Number(e.target.value), project.fps)),
+              },
+            })
+          }
+        />
+      </label>
+      <OverlayFadeFields
+        effectId={effect.id}
+        fadeInFrames={effect.fadeInFrames}
+        fadeOutFrames={effect.fadeOutFrames}
+        fps={project.fps}
+        update={update}
+      />
+      <p className="inspector__hint">Drag on the preview to move; drag a corner to resize.</p>
+    </div>
+  );
+}
+
 function OverlaysList() {
   const effects = useEditor((s) => s.project.effects);
   const selectEffect = useEditor((s) => s.selectEffect);
@@ -580,6 +632,7 @@ export function Inspector() {
   const text = useSelectedTextEffect();
   const caption = useSelectedCaption();
   const shape = useSelectedShape();
+  const image = useSelectedImageEffect();
   const clip = useSelectedClip();
 
   const hasOverlays = useEditor((s) => Object.keys(s.project.effects).length > 0);
@@ -592,6 +645,8 @@ export function Inspector() {
         <CaptionEditor />
       ) : shape ? (
         <ShapeEditor />
+      ) : image ? (
+        <ImageEffectEditor />
       ) : clip ? (
         <ClipEditor />
       ) : (

@@ -32,6 +32,7 @@ import {
   type ImageLayer,
   type TextLayer,
   type ShapeLayer,
+  type ImageOverlayLayer,
 } from '../render/scene';
 import { resolveMedia, getVideoElement } from '../media/registry';
 import { getFilteredCanvas } from '../render/colorFilter';
@@ -81,6 +82,7 @@ export function Preview() {
   const setClipTransform = useEditor((s) => s.setClipTransform);
   const updateText = useEditor((s) => s.updateTextEffect);
   const updateShape = useEditor((s) => s.updateShape);
+  const updateImageOverlay = useEditor((s) => s.updateImageOverlay);
 
   const boxRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
@@ -88,6 +90,7 @@ export function Preview() {
   const imageRef = useRef<Konva.Image>(null);
   const textRef = useRef<Konva.Text>(null);
   const shapeRef = useRef<Konva.Rect>(null);
+  const imageOverlayRef = useRef<Konva.Image>(null);
   const trRef = useRef<Konva.Transformer>(null);
   const [box, setBox] = useState({ width: 0, height: 0 });
 
@@ -193,6 +196,9 @@ export function Preview() {
   const selShape = scene.layers.find(
     (l): l is ShapeLayer => l.kind === 'shape' && l.effectId === selectedEffectId,
   );
+  const selImageOverlay = scene.layers.find(
+    (l): l is ImageOverlayLayer => l.kind === 'imageOverlay' && l.effectId === selectedEffectId,
+  );
   // Base (un-faded) opacity of the selected shape, read from the document so the
   // node stays at full editing weight even when scrubbed into its fade.
   const selShapeEffect = selShape ? project.effects[selShape.effectId] : undefined;
@@ -209,11 +215,13 @@ export function Preview() {
         ? textRef.current
         : selShape
           ? shapeRef.current
-          : null;
+          : selImageOverlay
+            ? imageOverlayRef.current
+            : null;
     tr.nodes(node ? [node] : []);
     tr.forceUpdate();
     tr.getLayer()?.batchDraw();
-  }, [selImage, selText, selShape, scale]);
+  }, [selImage, selText, selShape, selImageOverlay, scale]);
 
   return (
     <div className="preview" ref={boxRef}>
@@ -223,7 +231,26 @@ export function Preview() {
           <Layer ref={layerRef} scaleX={scale} scaleY={scale} listening={false}>
             <Rect x={0} y={0} width={scene.width} height={scene.height} fill={scene.background} />
             {scene.layers.map((layer) => {
-              if (layer === selImage || layer === selText || layer === selShape) return null;
+              if (
+                layer === selImage ||
+                layer === selText ||
+                layer === selShape ||
+                layer === selImageOverlay
+              )
+                return null;
+              if (layer.kind === 'imageOverlay') {
+                return (
+                  <KonvaImage
+                    key={layer.effectId}
+                    image={layer.drawable as CanvasImageSource as HTMLImageElement}
+                    x={layer.x}
+                    y={layer.y}
+                    width={layer.width}
+                    height={layer.height}
+                    opacity={layer.opacity}
+                  />
+                );
+              }
               if (layer.kind === 'shape') {
                 return (
                   <Rect
@@ -298,7 +325,7 @@ export function Preview() {
           </Layer>
 
           {/* interaction layer (screen-space) for the selected element */}
-          {(selImage || selText || selShape) && (
+          {(selImage || selText || selShape || selImageOverlay) && (
             <Layer>
               {selImage && (
                 <KonvaImage
@@ -393,6 +420,38 @@ export function Preview() {
                     n.scaleX(1);
                     n.scaleY(1);
                     updateShape(selectedEffectId as EffectId, {
+                      x: Math.round(n.x() / scale),
+                      y: Math.round(n.y() / scale),
+                      width: Math.round(w / scale),
+                      height: Math.round(h / scale),
+                    });
+                  }}
+                />
+              )}
+              {selImageOverlay && (
+                <KonvaImage
+                  ref={imageOverlayRef}
+                  image={selImageOverlay.drawable as CanvasImageSource as HTMLImageElement}
+                  x={selImageOverlay.x * scale}
+                  y={selImageOverlay.y * scale}
+                  width={selImageOverlay.width * scale}
+                  height={selImageOverlay.height * scale}
+                  opacity={selImageOverlay.opacity}
+                  draggable
+                  onDragEnd={(e) => {
+                    const n = e.target;
+                    updateImageOverlay(selectedEffectId as EffectId, {
+                      x: Math.round(n.x() / scale),
+                      y: Math.round(n.y() / scale),
+                    });
+                  }}
+                  onTransformEnd={(e) => {
+                    const n = e.target;
+                    const w = Math.max(8, n.width() * n.scaleX());
+                    const h = Math.max(8, n.height() * n.scaleY());
+                    n.scaleX(1);
+                    n.scaleY(1);
+                    updateImageOverlay(selectedEffectId as EffectId, {
                       x: Math.round(n.x() / scale),
                       y: Math.round(n.y() / scale),
                       width: Math.round(w / scale),
