@@ -17,7 +17,31 @@ npm run verify   # FULL gate: typecheck + unit + e2e + export + video + persist
 Architecture overview + file map: see `README.md`. Tests live in `scripts/` (Playwright)
 and `src/**/*.test.ts` (Vitest).
 
-## Status: Phase 21 + hardening pass complete ✅ — `npm run verify` green (54 unit + e2e + export + video + persist)
+## Status: Timeline & overlays pass complete ✅ — `npm run verify` green (60 unit + e2e + export + video + persist)
+
+### Timeline trimming, overlay lanes, image overlays & scroll areas (user feedback)
+Spec: `docs/superpowers/specs/2026-07-01-timeline-overlays-scroll-design.md`.
+- **Waveform fix** — a long audio clip showed the broken-image placeholder because the
+  waveform canvas's backing store exceeded the browser's max size. `Waveform.tsx` now caps
+  the intrinsic width (`MAX_WAVEFORM_PX`) and lets CSS stretch it.
+- **Discoverable trimming** — trim handles are now absolutely pinned to each edge (the right
+  edge previously had no real grab target) with a visible grip + tips; the Inspector
+  **Duration (s)** field works for every clip kind, so you can resize a clip whose edge is
+  scrolled off-screen. (Trimming was already non-destructive.)
+- **Overlay timeline lanes** — one compact lane per overlay above the tracks. Drag the block
+  to move it, drag an edge to retime start/end (`moveEffect`/`trimEffectStart`/`trimEffectEnd`
+  reducers + `applyEffect*` drag actions). Lane order = effect insertion order (no model
+  change). Selecting a block opens its Inspector.
+- **Image / character overlays** — new `ImageEffect` overlay type drawn in preview (Konva) +
+  export (Canvas2D) via `buildScene` (parity by construction). Added from the Elements panel's
+  library-image picker; drag/resize on the preview; `removeMedia` cleans up referencing
+  overlays. Round-trips through save/open (covered by e2e).
+- **Scroll areas** — `ui/ScrollArea.tsx` wraps `@radix-ui/react-scroll-area` with plain-CSS
+  shadcn styling; the timeline scrolls both axes (a `display:block` override keeps the sticky
+  track labels working inside Radix's viewport). 
+- **Test harness** — `scripts/_harness.mjs` spawns `npx` via a shell on Windows (was `ENOENT`).
+
+## Earlier status: Phase 21 + hardening pass complete ✅
 
 ### UI polish (user feedback)
 - **Collapsible + resizable side panels** — `ui/Sidebar.tsx` wraps the library + inspector:
