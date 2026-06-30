@@ -56,6 +56,7 @@ export function Preview() {
       if (!el) continue;
       activeIds.add(clip.mediaId);
       el.muted = true;
+      el.playbackRate = clip.speed;
       const target = sourceFrameAt(clip, playhead) / project.fps;
       if (isPlaying) {
         if (el.paused) {

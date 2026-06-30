@@ -11,8 +11,9 @@ import {
   splitClip,
   setClipFade,
   setClipGain,
+  setClipSpeed,
 } from './edits';
-import { getTrackClips, fadeMultiplier, overlapWithPrev } from './selectors';
+import { getTrackClips, fadeMultiplier, overlapWithPrev, sourceFrameAt } from './selectors';
 
 function setup() {
   let p = createEmptyProject({ fps: 30 });
@@ -36,6 +37,7 @@ function setup() {
     startFrame: 100,
     durationInFrames: 100,
     sourceInFrame: 0,
+    speed: 1,
     fadeInFrames: 0,
     fadeOutFrames: 0,
     effectIds: [],
@@ -130,6 +132,23 @@ describe('setClipGain', () => {
   it('is a no-op on non-audio clips', () => {
     const { p, clipId } = setup(); // a video clip
     expect(setClipGain(p, clipId, 0.5)).toBe(p);
+  });
+});
+
+describe('speed', () => {
+  it('setClipSpeed re-times the clip, keeping the same source content', () => {
+    const { p, clipId } = setup(); // duration 100, speed 1
+    const fast = setClipSpeed(p, clipId, 2).clips[clipId];
+    expect(fast.speed).toBe(2);
+    expect(fast.durationInFrames).toBe(50); // 2× → half as long on the timeline
+    const slow = setClipSpeed(p, clipId, 0.5).clips[clipId];
+    expect(slow.durationInFrames).toBe(200); // 0.5× → twice as long
+  });
+
+  it('sourceFrameAt advances by speed per timeline frame', () => {
+    const { p, clipId } = setup(); // start 100, source 0
+    const c = setClipSpeed(p, clipId, 2).clips[clipId];
+    expect(sourceFrameAt(c, 110)).toBe(20); // 10 timeline frames × 2
   });
 });
 

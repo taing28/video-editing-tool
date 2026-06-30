@@ -27,6 +27,11 @@ export async function restoreAndStartAutosave(): Promise<void> {
   try {
     const saved = await persistence.loadProject();
     if (saved) {
+      // Migrate documents saved by older versions (fields added in later phases).
+      for (const clip of Object.values(saved.clips)) {
+        const c = clip as unknown as { speed?: number };
+        if (typeof c.speed !== 'number') c.speed = 1;
+      }
       // Rebuild runtime media (drawables / decoded elements) from saved blobs,
       // and refresh each asset's object URL.
       for (const asset of Object.values(saved.media)) {

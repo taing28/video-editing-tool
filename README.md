@@ -28,6 +28,8 @@ npm run build      # typecheck + production build
 - **Audio waveforms** drawn on audio clips in the timeline.
 - **Per-clip volume** (audio) and **fade in / fade out** (video opacity + audio gain ramps,
   applied identically in preview and export).
+- **Speed control** — per-clip slow-mo / fast-forward (0.25×–4×) for video & audio; changing
+  speed re-times the clip's length and pitches audio (preview + export).
 - **Background color** for the canvas (letterbox fill for vertical/odd-ratio media).
 - **Cross-dissolve transitions** — overlap two video clips on a track (drag, or the
   inspector's "Cross-dissolve with previous" button) and the later clip dissolves in.
@@ -120,7 +122,8 @@ src/
 - ~~**Phase 8 — Export controls**~~ ✅ done: resolution/quality/format dialog + cancel.
 - ~~**Phase 9 — Captions**~~ ✅ done: caption effect (2nd effect type) + overlays list.
 - ~~**Phase 10 — Auto-captions**~~ ✅ done: on-device Whisper transcription → timed captions.
-- **Phase 11 — More effects:** speed control, lower-thirds, transition styles, export presets.
+- ~~**Phase 11 — Speed control**~~ ✅ done: per-clip 0.25×–4× for video & audio.
+- **Phase 12 — More effects:** lower-thirds, transition styles, export presets.
 - **Later — Scale:** move render+encode into a Web Worker (note: `OfflineAudioContext` +
   `<video>` seeking are main-thread-only, so this mainly helps pure image+audio projects).
 - Optional: wrap in Electron + mediabunny's server backend for native-speed export.

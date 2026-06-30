@@ -80,17 +80,21 @@ export async function start(project: Project, fromFrame: number, fps: number): P
     const clipEndSec = (clip.startFrame + clip.durationInFrames) / fps;
     if (clipEndSec <= playSec) return; // already finished by the playhead
 
+    const speed = clip.speed;
+    const elapsedSec = Math.max(0, playSec - clipStartSec); // real timeline seconds
     const when = t0 + Math.max(0, clipStartSec - playSec);
-    const offset = clip.sourceInFrame / fps + Math.max(0, playSec - clipStartSec);
-    const remainInClip = clipEndSec - Math.max(clipStartSec, playSec);
+    // Source position advances at `speed` per real second.
+    const offset = clip.sourceInFrame / fps + elapsedSec * speed;
+    const remainInClip = clipEndSec - Math.max(clipStartSec, playSec); // real seconds left
     const remainInSource = Math.max(0, buffer.duration - offset);
-    const duration = Math.min(remainInClip, remainInSource);
+    // At playbackRate `speed`, `remainInClip` real seconds needs speed× source.
+    const duration = Math.min(remainInClip * speed, remainInSource);
     if (duration <= 0) return;
 
     const node = ctx!.createBufferSource();
     node.buffer = buffer;
+    node.playbackRate.value = speed;
     const gain = ctx!.createGain();
-    const elapsedSec = Math.max(0, playSec - clipStartSec);
     scheduleGainFade(
       gain.gain,
       when,

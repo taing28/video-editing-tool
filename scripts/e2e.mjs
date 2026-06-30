@@ -150,6 +150,20 @@ try {
   });
   assert(fadeIn >= 12 && fadeIn <= 18, `fade-in ~15 frames (got ${fadeIn})`);
 
+  log('STEP 5c — clip speed (2× halves the clip on the timeline)');
+  const durBefore = await page.evaluate(() => {
+    const ed = window.__editor.getState();
+    return ed.project.clips[ed.selectedClipId].durationInFrames;
+  });
+  await page.locator('.inspector select').selectOption('2');
+  const sped = await page.evaluate(() => {
+    const ed = window.__editor.getState();
+    const c = ed.project.clips[ed.selectedClipId];
+    return { dur: c.durationInFrames, speed: c.speed };
+  });
+  assert(sped.speed === 2, `speed set to 2× (${sped.speed})`);
+  assert(sped.dur === Math.round(durBefore / 2), `2× halved duration (${durBefore} -> ${sped.dur})`);
+
   log('STEP 6 — select + split at playhead');
   await page.click('.lane--video .clip');
   await page.click('.ruler', { position: { x: 150, y: 12 } }); // scrub into the clip

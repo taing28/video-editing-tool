@@ -92,12 +92,14 @@ function ClipEditor() {
   const setClipTransform = useEditor((s) => s.setClipTransform);
   const setClipGain = useEditor((s) => s.setClipGain);
   const setClipFade = useEditor((s) => s.setClipFade);
+  const setClipSpeed = useEditor((s) => s.setClipSpeed);
   const addTransition = useEditor((s) => s.addTransition);
   if (!clip) return null;
 
   const media = project.media[clip.mediaId];
   const seconds = framesToSeconds(clip.durationInFrames, project.fps);
   const isVisual = clip.kind === 'image' || clip.kind === 'video';
+  const hasSpeed = clip.kind === 'video' || clip.kind === 'audio';
   const track = project.tracks[clip.trackId];
   const hasPrev = track ? track.clipOrder.indexOf(clip.id) > 0 : false;
 
@@ -108,6 +110,21 @@ function ClipEditor() {
       <p className="inspector__row">
         start {clip.startFrame}f · {clip.durationInFrames}f
       </p>
+      {hasSpeed && (
+        <label className="field">
+          <span>Speed</span>
+          <select
+            value={clip.speed}
+            onChange={(e) => setClipSpeed(clip.id, Number(e.target.value))}
+          >
+            {[0.25, 0.5, 1, 1.5, 2, 4].map((s) => (
+              <option key={s} value={s}>
+                {s}×{s < 1 ? ' (slow-mo)' : s > 1 ? ' (fast)' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {clip.kind === 'image' && (
         <label className="field">
           <span>Duration (s)</span>

@@ -126,23 +126,24 @@ async function mixAudio(project: Project, totalSeconds: number): Promise<AudioBu
     if (!buffer) continue;
     const node = ctx.createBufferSource();
     node.buffer = buffer;
+    node.playbackRate.value = clip.speed;
     const gain = ctx.createGain();
     const when = clip.startFrame / project.fps; // timeline position (s)
     const offset = clip.sourceInFrame / project.fps; // trim into source (s)
-    const duration = clip.durationInFrames / project.fps;
+    const timelineDur = clip.durationInFrames / project.fps; // real seconds on the timeline
     scheduleGainFade(
       gain.gain,
       when,
       clip.gain,
       clip.fadeInFrames / project.fps,
       clip.fadeOutFrames / project.fps,
-      duration,
+      timelineDur,
       0,
     );
     node.connect(gain).connect(ctx.destination);
-    // Don't read past the end of the decoded source.
+    // At playbackRate `speed`, filling `timelineDur` needs speed× source seconds.
     const available = Math.max(0, buffer.duration - offset);
-    node.start(when, offset, Math.min(duration, available));
+    node.start(when, offset, Math.min(timelineDur * clip.speed, available));
     scheduled++;
   }
   if (scheduled === 0) return null;

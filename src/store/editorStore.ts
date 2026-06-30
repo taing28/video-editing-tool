@@ -43,6 +43,7 @@ import {
   setClipDuration as setClipDurationEdit,
   setClipFade as setClipFadeEdit,
   setClipGain as setClipGainEdit,
+  setClipSpeed as setClipSpeedEdit,
   splitClip as splitClipEdit,
   trimClipEnd as trimClipEndEdit,
   trimClipStart as trimClipStartEdit,
@@ -108,6 +109,7 @@ export interface EditorState {
   setClipTransform: (id: ClipId, transform: Transform) => void;
   setClipGain: (id: ClipId, gain: number) => void;
   setClipFade: (id: ClipId, patch: { fadeInFrames?: number; fadeOutFrames?: number }) => void;
+  setClipSpeed: (id: ClipId, speed: number) => void;
   setBackground: (color: string) => void;
 
   // interactive drag lifecycle (one undo step per gesture)
@@ -310,6 +312,7 @@ export const useEditor = create<EditorState>((set, get) => {
 
     setClipGain: (id, gain) => commit((p) => setClipGainEdit(p, id, gain)),
     setClipFade: (id, patch) => commit((p) => setClipFadeEdit(p, id, patch)),
+    setClipSpeed: (id, speed) => commit((p) => setClipSpeedEdit(p, id, speed)),
     setBackground: (color) => commit((p) => setBackgroundEdit(p, color)),
 
     beginInteraction: () => {

@@ -83,7 +83,7 @@ export function getActiveEffects(p: Project, frame: Frames): Effect[] {
  * (timeline offset into the clip) + (the clip's trim point into the source)
  */
 export function sourceFrameAt(clip: Clip, frame: Frames): Frames {
-  return clip.sourceInFrame + (frame - clip.startFrame);
+  return clip.sourceInFrame + (frame - clip.startFrame) * clip.speed;
 }
 
 /**

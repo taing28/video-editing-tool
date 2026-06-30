@@ -54,6 +54,9 @@ export interface BaseClip {
   durationInFrames: Frames;
   /** Offset of the clip's first frame INTO the source media (the trim point). */
   sourceInFrame: Frames;
+  /** Playback speed (1 = normal, 2 = double, 0.5 = slow-mo). Source frames
+   * consumed per timeline frame = `speed`. Meaningful for video/audio only. */
+  speed: number;
   /** Ramp from 0 over this many frames at the clip's start (0 = no fade). */
   fadeInFrames: Frames;
   /** Ramp to 0 over this many frames at the clip's end (0 = no fade). */

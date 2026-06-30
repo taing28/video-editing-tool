@@ -124,14 +124,16 @@ export function trimClipStart(p: Project, clipId: ClipId, newStartFrame: Frames)
   const clip = p.clips[clipId];
   if (!clip) return p;
   const rightEdge = clip.startFrame + clip.durationInFrames;
-  const minStart = Math.max(0, clip.startFrame - clip.sourceInFrame); // can't pull source < 0
+  // Each timeline frame consumes `speed` source frames, so the trim point can
+  // only be pulled back by sourceInFrame/speed timeline frames.
+  const minStart = Math.max(0, clip.startFrame - clip.sourceInFrame / clip.speed);
   const maxStart = rightEdge - 1; // keep at least 1 frame
   const start = clampFrame(Math.round(newStartFrame), minStart, maxStart);
   const delta = start - clip.startFrame;
   const next = putClip(p, {
     ...clip,
     startFrame: start,
-    sourceInFrame: clip.sourceInFrame + delta,
+    sourceInFrame: Math.max(0, Math.round(clip.sourceInFrame + delta * clip.speed)),
     durationInFrames: clip.durationInFrames - delta,
   });
   return recompute(sortTrack(next, clip.trackId));
@@ -146,8 +148,12 @@ export function trimClipEnd(p: Project, clipId: ClipId, newEndFrame: Frames): Pr
   const clip = p.clips[clipId];
   if (!clip) return p;
   const limit = sourceLimit(p, clip);
+  // duration*speed source frames are consumed, so max timeline duration scales
+  // inversely with speed.
   const maxDuration =
-    limit === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : limit - clip.sourceInFrame;
+    limit === Number.POSITIVE_INFINITY
+      ? Number.POSITIVE_INFINITY
+      : Math.floor((limit - clip.sourceInFrame) / clip.speed);
   let duration = Math.round(newEndFrame) - clip.startFrame;
   duration = Math.max(1, duration);
   if (duration > maxDuration) duration = maxDuration;
@@ -160,6 +166,26 @@ export function setClipDuration(p: Project, clipId: ClipId, duration: Frames): P
   const clip = p.clips[clipId];
   if (!clip) return p;
   return trimClipEnd(p, clipId, clip.startFrame + Math.max(1, Math.round(duration)));
+}
+
+/**
+ * Set a video/audio clip's playback speed. The clip keeps the SAME source
+ * content, so its timeline length scales inversely (2× → half as long).
+ */
+export function setClipSpeed(p: Project, clipId: ClipId, newSpeed: number): Project {
+  const clip = p.clips[clipId];
+  if (!clip || clip.kind === 'image') return p; // a still has no playback speed
+  const speed = Math.max(0.1, Math.min(8, newSpeed));
+  if (speed === clip.speed) return p;
+  const sourceContent = clip.durationInFrames * clip.speed; // invariant across speed
+  let duration = Math.max(1, Math.round(sourceContent / speed));
+  const limit = sourceLimit(p, clip);
+  if (limit !== Number.POSITIVE_INFINITY) {
+    const maxDur = Math.floor((limit - clip.sourceInFrame) / speed);
+    if (duration > maxDur) duration = Math.max(1, maxDur);
+  }
+  const next = putClip(p, { ...clip, speed, durationInFrames: duration });
+  return recompute(sortTrack(next, clip.trackId));
 }
 
 /**
@@ -318,6 +344,7 @@ export function makeClipFromMedia(
     startFrame: Math.max(0, Math.round(args.startFrame)),
     durationInFrames: media.durationInFrames,
     sourceInFrame: 0,
+    speed: 1,
     fadeInFrames: 0,
     fadeOutFrames: 0,
     effectIds: [] as EffectId[],

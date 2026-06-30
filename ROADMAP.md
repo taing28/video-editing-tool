@@ -42,10 +42,12 @@ and `src/**/*.test.ts` (Vitest).
   timed captions. Lazy-loaded (~60 MB, fp32). Flow is mock-tested in e2e; the real model is
   build-verified + checked by `npm run caption:smoke`. (`src/captions/`.)
 
+- [x] **11 — Speed control** — per-clip 0.25×–4× for video & audio. Changing speed re-times the
+  clip length (keeps the same source content); `sourceFrameAt`/trim/audio playbackRate are all
+  speed-aware. (`setClipSpeed` in `src/core/edits.ts`.)
+
 ## Phases planned (pick any — not strictly ordered)
 
-- [ ] **11 — Speed control** — slow-mo / speed-up per clip (affects clip duration mapping +
-  audio resample).
 - [ ] **12 — More overlays** — lower-thirds, shapes/boxes, stickers (extend the Effect union).
 - [ ] **13 — More transitions** — wipe / slide / fade-to-color between clips.
 - [ ] **14 — Export presets** — one-click TikTok / Reels / YouTube / Square (sets aspect +
