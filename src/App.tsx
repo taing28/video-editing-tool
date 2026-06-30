@@ -14,6 +14,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { Toolbar } from './ui/Toolbar';
+import { Sidebar } from './ui/Sidebar';
 import { MediaLibrary } from './ui/MediaLibrary';
 import { Preview } from './ui/Preview';
 import { Inspector } from './ui/Inspector';
@@ -81,9 +82,13 @@ export default function App() {
       <div className="app">
         <Toolbar />
         <div className="app__middle">
-          <MediaLibrary />
+          <Sidebar side="left" storageKey="lib" label="media library" defaultWidth={240}>
+            <MediaLibrary />
+          </Sidebar>
           <Preview />
-          <Inspector />
+          <Sidebar side="right" storageKey="insp" label="inspector" defaultWidth={260}>
+            <Inspector />
+          </Sidebar>
         </div>
         <Timeline />
       </div>

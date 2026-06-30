@@ -70,6 +70,8 @@ npm run build      # typecheck + production build
 - **Save / Open project file** — export the whole project (timeline **+ media bytes**) as one
   portable `.videoproj.json` you can back up, share, or reopen on another machine.
 - **Duplicate** a clip or overlay (⧉ button / ⌘/Ctrl+D) — repeat a configured photo or title.
+- **Collapsible, resizable side panels** — drag the inner edge to resize, click the ‹/› tab to
+  slide a panel away; widths persist. Inspector fields wrap instead of overflowing; no scrollbars.
 - Undo/redo, keyboard shortcuts (Space, ⌘/Ctrl+Z, ⌘/Ctrl+D to duplicate, Delete, S to split).
 
 **Not yet wired:** auto-transcription (Whisper) to fill the caption track; speed control;

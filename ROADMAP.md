@@ -19,6 +19,14 @@ and `src/**/*.test.ts` (Vitest).
 
 ## Status: Phase 21 + hardening pass complete ✅ — `npm run verify` green (54 unit + e2e + export + video + persist)
 
+### UI polish (user feedback)
+- **Collapsible + resizable side panels** — `ui/Sidebar.tsx` wraps the library + inspector:
+  drag-to-resize handle (180–480px, persisted to localStorage), a ‹/› toggle that slides the panel
+  to 0 width (clip layer keeps the toggle reachable). e2e step 1b covers collapse/expand/resize.
+- **No scrollbars / theme fixes** — hid native scrollbars app-wide (index.css); inspector inputs
+  now `width:100%` and `.field-row` wraps, so the panel never overflows horizontally (kills the
+  stray white scrollbar). The "black preview" users hit is a hidden Video track (the 🚫/👁 toggle).
+
 ### Hardening pass (adversarial review of Phases 16–21)
 - **Media leak on project replace** — `loadProject`/`newProject` swapped the document but never
   released the OUTGOING project's runtime media (object URLs + File blobs), so each open/new

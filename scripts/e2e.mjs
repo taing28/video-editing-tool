@@ -107,6 +107,25 @@ try {
   assert(await page.locator('.toolbar').count() === 1, 'toolbar present');
   assert(await page.locator('.lane').count() === 2, 'video + audio lanes present');
 
+  log('STEP 1b — sidebars collapse / expand / resize');
+  const rightWidth = () =>
+    page.locator('.sidebar--right').evaluate((el) => el.getBoundingClientRect().width);
+  const wOpen = await rightWidth();
+  assert(wOpen > 100, `right sidebar starts open (${Math.round(wOpen)}px)`);
+  await page.click('.sidebar--right .sidebar__toggle');
+  await page.waitForTimeout(320); // slide animation
+  const wClosed = await rightWidth();
+  assert(wClosed < 12, `toggle collapses the sidebar (${Math.round(wOpen)} -> ${Math.round(wClosed)})`);
+  await page.click('.sidebar--right .sidebar__toggle');
+  await page.waitForTimeout(320);
+  assert((await rightWidth()) > 100, 'toggle re-expands the sidebar');
+  // Drag the resize handle to widen the right sidebar (drag left = wider).
+  await dragBy(page, '.sidebar--right .sidebar__resize', -60, 0);
+  assert(
+    (await rightWidth()) > wOpen + 30,
+    `resize handle widens the sidebar (${Math.round(wOpen)} -> ${Math.round(await rightWidth())})`,
+  );
+
   log('STEP 2 — import image + audio');
   await page.setInputFiles('.library input[type=file]', [pngPath, wavPath]);
   await page.waitForSelector('.media-card');

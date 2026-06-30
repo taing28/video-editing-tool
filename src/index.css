@@ -9,8 +9,20 @@ body {
   background: #0e0f13;
   color: #e6e8ee;
   -webkit-font-smoothing: antialiased;
+  overflow: hidden;
 }
 
 button {
   font-family: inherit;
+}
+
+/* No native scrollbar UI anywhere — scrolling still works (wheel / trackpad). */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge */
+}
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
 }
