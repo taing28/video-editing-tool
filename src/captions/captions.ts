@@ -40,6 +40,8 @@ export function segmentsToCaptions(
       fontSize: style.fontSize,
       fontFamily: style.fontFamily,
       color: style.color,
+      // Auto-captions default to karaoke — each word lights up as it's spoken.
+      karaoke: true,
     }));
 }
 

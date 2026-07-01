@@ -403,12 +403,42 @@ try {
     'caption effect added + selected',
   );
   await page.waitForSelector('.inspector textarea');
-  await page.fill('.inspector textarea', 'Hello captions');
+  await page.fill('.inspector textarea', 'one two three four');
   assert(
     (await page.evaluate((id) => window.__editor.getState().project.effects[id].text, capId)) ===
-      'Hello captions',
+      'one two three four',
     'caption text edits apply',
   );
+
+  log('STEP 13b2 — karaoke: enable + the active word advances with the playhead');
+  await page.locator('.inspector .field-check:has-text("Karaoke") input').check();
+  assert(
+    await page.evaluate((id) => window.__editor.getState().project.effects[id].karaoke === true, capId),
+    'karaoke enabled on the caption',
+  );
+  // The active word (pure selector logic) advances across the caption window.
+  const activeWordAt = (id, frame) =>
+    page.evaluate(
+      ({ id, frame }) => {
+        const c = window.__editor.getState().project.effects[id];
+        const words = c.text.split(/\s+/).filter(Boolean);
+        const into = frame - c.timing.start;
+        const dur = Math.max(1, c.timing.duration);
+        for (let i = 0; i < words.length; i++) {
+          if (into >= Math.round((i * dur) / words.length) && into < Math.round(((i + 1) * dur) / words.length))
+            return i;
+        }
+        return -1;
+      },
+      { id, frame },
+    );
+  const cap = await page.evaluate((id) => window.__editor.getState().project.effects[id].timing, capId);
+  const wEarly = await activeWordAt(capId, cap.start);
+  const wLate = await activeWordAt(capId, cap.start + cap.duration - 1);
+  assert(wEarly === 0 && wLate > wEarly, `karaoke word advances (${wEarly} -> ${wLate})`);
+  // Scrub the real playhead into the caption so the preview renders karaoke words.
+  await page.click('.ruler', { position: { x: 150, y: 12 } });
+  await page.waitForTimeout(80);
 
   log('STEP 13c — overlays list re-selects an overlay');
   await page.evaluate(() => window.__editor.getState().selectClip(null)); // deselect

@@ -442,6 +442,27 @@ function CaptionEditor() {
           onChange={(e) => update(caption.id, { color: e.target.value })}
         />
       </label>
+      <label
+        className="field-check"
+        data-tip="Karaoke: highlight each word in turn as it's spoken (Reels/TikTok style)."
+      >
+        <input
+          type="checkbox"
+          checked={!!caption.karaoke}
+          onChange={(e) => update(caption.id, { karaoke: e.target.checked } as never)}
+        />
+        <span>Karaoke (highlight words)</span>
+      </label>
+      {caption.karaoke && (
+        <label className="field">
+          <span>Highlight color</span>
+          <input
+            type="color"
+            value={caption.highlightColor ?? '#ffd400'}
+            onChange={(e) => update(caption.id, { highlightColor: e.target.value } as never)}
+          />
+        </label>
+      )}
       <label className="field">
         <span>Duration (s)</span>
         <input
