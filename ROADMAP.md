@@ -17,7 +17,7 @@ npm run verify   # FULL gate: typecheck + unit + e2e + export + video + persist
 Architecture overview + file map: see `README.md`. Tests live in `scripts/` (Playwright)
 and `src/**/*.test.ts` (Vitest).
 
-## Status: Karaoke captions complete ✅ — `npm run verify` green (75 unit + e2e + export + video + persist)
+## Status: Slideshow builder complete ✅ — `npm run verify` green (78 unit + e2e + export + video + persist)
 
 ### Timeline row reorder + pin (executed from docs/superpowers/plans/2026-07-01-timeline-row-reorder-pin.md)
 - `Project.effectOrder` (bottom-to-top paint order) + `Track.pinned`/`BaseEffect.pinned`; migrated for old docs.
@@ -170,9 +170,10 @@ Spec: `docs/superpowers/specs/2026-07-01-timeline-overlays-scroll-design.md`.
   shared `render/captionLayout.ts` (offscreen measure) used by both preview (Konva word nodes) and
   export (`paint.ts`). FOLLOW-UP: real speech-synced word timing (switch `transcribe.ts` to
   `return_timestamps:'word'` and store per-word timings, preferred over the even fallback).
-- [ ] **Slideshow builder** — multi-select library images and drop them as one timed sequence with
-  a default per-image duration + optional auto Ken Burns and crossfades between shots. A store
-  action that appends N image clips (each with `motion` + a small overlap) in one undo step.
+- [x] **Slideshow builder** ✅ done — "🎞 Make slideshow" in the Media panel appends every image
+  as a timed sequence on the video track (per-image seconds + Ken Burns + crossfade options), one
+  undo step. Pure `buildSlideshow(p, clipIds, opts)` reducer (alternating Ken Burns; each clip
+  overlaps the previous by `crossfadeFrames` → the existing overlap→dissolve makes the crossfade).
 - [ ] **Record voiceover** — capture mic narration in-app (`MediaRecorder`), add it as an audio
   clip on an audio track; works with the existing `duck` so music dips under it. Needs a record
   UI (arm/level/stop) + permission handling; the recorded blob imports through the normal path.
