@@ -1341,3 +1341,36 @@
   color: var(--accent);
   font-weight: 600;
 }
+
+/* Reorder grip on each lane label. */
+.lane__grip {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  color: #6b7180;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: -2px;
+  padding: 0 4px 0 0;
+}
+.lane__grip:active {
+  cursor: grabbing;
+}
+.lane__toggle.is-on {
+  filter: none;
+  opacity: 1;
+  outline: 1px solid var(--accent);
+  border-radius: 4px;
+}
+
+/* Pinned rows: a sticky band that stays at the top while the rest scroll. */
+.timeline__pinned {
+  position: sticky;
+  top: 26px; /* below the 26px ruler */
+  z-index: 6; /* above clips (z 2-3) */
+  background: var(--panel);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.timeline__pinned .lane {
+  background: color-mix(in srgb, var(--panel-2) 80%, var(--accent) 6%);
+}
