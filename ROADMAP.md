@@ -162,6 +162,24 @@ Spec: `docs/superpowers/specs/2026-07-01-timeline-overlays-scroll-design.md`.
 
 ## Phases planned (pick any — not strictly ordered)
 
+### Recommended next (2026-07-01 — best fit for the voice + picture + captions workflow)
+
+- [ ] **Karaoke / animated captions** ⭐ — word-level captions that highlight each word as it's
+  spoken (Reels/TikTok style). Reuses the on-device Whisper pipeline: switch `transcribe.ts` to
+  word timestamps (`return_timestamps: 'word'`), store per-word `{text, start, end}` on the caption
+  effect, and render a "current word" highlight in BOTH preview (Konva) and export (`paint.ts`) —
+  keep parity via one shared word-at-frame helper in `scene.ts`.
+- [ ] **Slideshow builder** — multi-select library images and drop them as one timed sequence with
+  a default per-image duration + optional auto Ken Burns and crossfades between shots. A store
+  action that appends N image clips (each with `motion` + a small overlap) in one undo step.
+- [ ] **Record voiceover** — capture mic narration in-app (`MediaRecorder`), add it as an audio
+  clip on an audio track; works with the existing `duck` so music dips under it. Needs a record
+  UI (arm/level/stop) + permission handling; the recorded blob imports through the normal path.
+- [ ] **Text readability kit** — optional background/highlight box behind text (drawn from a shared
+  measured-text box so preview + export agree), outline + drop-shadow, and a few bundled fonts.
+
+### Other / lower priority
+
 - [ ] **Export presets** — one-click TikTok / YouTube / Square (mostly redundant: the canvas size
   dropdown already offers the platform WxH options; would add named labels + 4K/4:5 resolutions).
 - [ ] **Stickers** — image/emoji overlays (reuse the shape interaction + an image source).
