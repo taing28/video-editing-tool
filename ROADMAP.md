@@ -17,7 +17,15 @@ npm run verify   # FULL gate: typecheck + unit + e2e + export + video + persist
 Architecture overview + file map: see `README.md`. Tests live in `scripts/` (Playwright)
 and `src/**/*.test.ts` (Vitest).
 
-## Status: Timeline & overlays pass complete ✅ — `npm run verify` green (60 unit + e2e + export + video + persist)
+## Status: Timeline row reorder + pin complete ✅ — `npm run verify` green (67 unit + e2e + export + video + persist)
+
+### Timeline row reorder + pin (executed from docs/superpowers/plans/2026-07-01-timeline-row-reorder-pin.md)
+- `Project.effectOrder` (bottom-to-top paint order) + `Track.pinned`/`BaseEffect.pinned`; migrated for old docs.
+- `edits.ts` maintains `effectOrder` (insert/remove/duplicate/removeMedia) + `reorderEffectRelative`/
+  `reorderTrackRelative` (within-group) + `setEffectPinned`/`setTrackPinned`.
+- `selectors.ts`: `getActiveEffects` iterates `effectOrder`; `timelineRows` + `partitionPinned`.
+- Store `reorderRow`/`toggleRowPinned`; Timeline renders rows via `timelineRows` with a grip drag-reorder
+  (⋮⋮) and a 📌 pin toggle; pinned rows sit in a sticky band. e2e step 13h covers reorder + pin.
 
 ### Timeline trimming, overlay lanes, image overlays & scroll areas (user feedback)
 Spec: `docs/superpowers/specs/2026-07-01-timeline-overlays-scroll-design.md`.
