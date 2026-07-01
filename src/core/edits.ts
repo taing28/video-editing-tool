@@ -487,6 +487,60 @@ export function duplicateEffect(p: Project, effectId: EffectId, newId: EffectId)
   return { ...p, effects: { ...p.effects, [newId]: copy }, effectOrder };
 }
 
+// --- reorder + pin (timeline rows) -----------------------------------------
+
+/** Move `id` so it sits immediately before/after `targetId` in an order array. */
+function reposition(
+  order: string[],
+  id: string,
+  targetId: string,
+  place: 'before' | 'after',
+): string[] {
+  if (id === targetId) return order;
+  const without = order.filter((x) => x !== id);
+  const ti = without.indexOf(targetId);
+  if (ti < 0) return order;
+  const at = place === 'before' ? ti : ti + 1;
+  return [...without.slice(0, at), id, ...without.slice(at)];
+}
+
+export function reorderEffectRelative(
+  p: Project,
+  id: EffectId,
+  targetId: EffectId,
+  place: 'before' | 'after',
+): Project {
+  const next = reposition(p.effectOrder, id, targetId, place);
+  if (next === p.effectOrder) return p;
+  return { ...p, effectOrder: next as Project['effectOrder'] };
+}
+
+export function reorderTrackRelative(
+  p: Project,
+  id: TrackId,
+  targetId: TrackId,
+  place: 'before' | 'after',
+): Project {
+  const a = p.tracks[id];
+  const b = p.tracks[targetId];
+  if (!a || !b || a.kind !== b.kind) return p; // within-kind only
+  const next = reposition(p.trackOrder, id, targetId, place);
+  if (next === p.trackOrder) return p;
+  return { ...p, trackOrder: next as Project['trackOrder'] };
+}
+
+export function setEffectPinned(p: Project, id: EffectId, pinned: boolean): Project {
+  const e = p.effects[id];
+  if (!e || !!e.pinned === pinned) return p;
+  return { ...p, effects: { ...p.effects, [id]: { ...e, pinned } } };
+}
+
+export function setTrackPinned(p: Project, id: TrackId, pinned: boolean): Project {
+  const t = p.tracks[id];
+  if (!t || !!t.pinned === pinned) return p;
+  return { ...p, tracks: { ...p.tracks, [id]: { ...t, pinned } } };
+}
+
 /** Set a video/image clip's transition-in style. */
 export function setClipTransition(
   p: Project,

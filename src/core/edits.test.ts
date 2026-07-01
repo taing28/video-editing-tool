@@ -21,6 +21,9 @@ import {
   trimEffectStart,
   trimEffectEnd,
   removeMedia,
+  reorderEffectRelative,
+  reorderTrackRelative,
+  setTrackPinned,
 } from './edits';
 import {
   getTrackClips,
@@ -432,5 +435,35 @@ describe('effectOrder maintenance', () => {
       'a2' as unknown as Parameters<typeof duplicateEffect>[2],
     );
     expect(p.effectOrder).toEqual(['a', 'a2', 'b']);
+  });
+});
+
+describe('reorder + pin reducers', () => {
+  it('reorderEffectRelative moves an id before/after a target', () => {
+    let p = createEmptyProject({ fps: 30 });
+    p = { ...p, effectOrder: ['a', 'b', 'c'] as unknown as typeof p.effectOrder };
+    expect(reorderEffectRelative(p, 'c' as never, 'a' as never, 'before').effectOrder).toEqual([
+      'c',
+      'a',
+      'b',
+    ]);
+    expect(reorderEffectRelative(p, 'a' as never, 'c' as never, 'after').effectOrder).toEqual([
+      'b',
+      'c',
+      'a',
+    ]);
+  });
+
+  it('reorderTrackRelative only moves within the same track kind', () => {
+    const p = createEmptyProject({ fps: 30 }); // trackOrder = [video, audio]
+    const [video, audio] = p.trackOrder;
+    // different kinds → no-op (returns the same object)
+    expect(reorderTrackRelative(p, video as never, audio as never, 'before')).toBe(p);
+  });
+
+  it('setEffectPinned / setTrackPinned toggle the flag', () => {
+    const p = createEmptyProject({ fps: 30 });
+    const track = p.trackOrder[0];
+    expect(setTrackPinned(p, track as never, true).tracks[track].pinned).toBe(true);
   });
 });
