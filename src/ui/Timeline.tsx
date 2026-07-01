@@ -13,7 +13,9 @@ import { memo, useRef } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useEditor } from '../store/editorStore';
 import type { Project, Clip, Effect } from '../core/model';
-import { getTracksInOrder, getTrackClips } from '../core/selectors';
+import type { TrackId } from '../core/ids';
+import { getTrackClips, timelineRows, partitionPinned } from '../core/selectors';
+import type { TimelineRow } from '../core/selectors';
 import { snapStart, snapTargets } from '../core/snapping';
 import { secondsToFrames } from '../core/time';
 import { Waveform } from './Waveform';
@@ -22,6 +24,53 @@ import { ScrollArea } from './ScrollArea';
 
 /** Width of the sticky track-label gutter; clips/ruler/playhead align after it. */
 const LABEL_WIDTH = 92;
+
+/**
+ * Hand-rolled vertical reorder drag, mirroring the clip/overlay drag pattern.
+ * The grip's onPointerDown starts it; while dragging, the `.lane` under the
+ * pointer (matched by data-row-id / data-row-group in the same group) becomes
+ * the drop target. One gesture = one undo step.
+ */
+function useRowReorder(row: TimelineRow) {
+  const reorderRow = useEditor((s) => s.reorderRow);
+  const beginInteraction = useEditor((s) => s.beginInteraction);
+  const dragging = useRef(false);
+  const started = useRef(false);
+
+  const onGripDown = (e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    (e.target as Element).setPointerCapture(e.pointerId);
+    dragging.current = true;
+    started.current = false;
+  };
+
+  const onGripMove = (e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const el = document
+      .elementsFromPoint(e.clientX, e.clientY)
+      .find((n) => (n as HTMLElement).classList?.contains('lane')) as HTMLElement | undefined;
+    const targetId = el?.dataset.rowId;
+    const targetGroup = el?.dataset.rowGroup;
+    if (!targetId || targetId === row.id) return;
+    const myGroup = row.type === 'overlay' ? 'overlay' : row.kind;
+    if (targetGroup !== myGroup) return; // same group only
+    if (!started.current) {
+      started.current = true;
+      beginInteraction();
+    }
+    const r = el!.getBoundingClientRect();
+    const place = e.clientY < r.top + r.height / 2 ? 'above' : 'below';
+    reorderRow(row, targetId, place);
+  };
+
+  const onGripUp = (e: React.PointerEvent) => {
+    if (dragging.current) (e.target as Element).releasePointerCapture?.(e.pointerId);
+    dragging.current = false;
+  };
+
+  return { onGripDown, onGripMove, onGripUp };
+}
 
 interface DragState {
   mode: 'move' | 'trim-start' | 'trim-end';
@@ -242,19 +291,43 @@ const OverlayBlock = memo(function OverlayBlock({
 function OverlayLane({ effect, pxPerFrame }: { effect: Effect; pxPerFrame: number }) {
   const removeEffect = useEditor((s) => s.removeEffect);
   const selectEffect = useEditor((s) => s.selectEffect);
+  const toggleRowPinned = useEditor((s) => s.toggleRowPinned);
   const selected = useEditor((s) => s.selectedEffectId === effect.id);
   const media = useEditor((s) =>
     effect.type === 'image' ? s.project.media[effect.mediaId] : undefined,
   );
+  const grip = useRowReorder({ type: 'overlay', id: effect.id, pinned: !!effect.pinned });
 
   return (
-    <div className={`lane lane--overlay${selected ? ' is-active' : ''}`}>
+    <div
+      className={`lane lane--overlay${selected ? ' is-active' : ''}`}
+      data-row-id={effect.id}
+      data-row-group="overlay"
+    >
       <div className="lane__label">
+        <span
+          className="lane__grip"
+          title="Drag to reorder"
+          onPointerDown={grip.onGripDown}
+          onPointerMove={grip.onGripMove}
+          onPointerUp={grip.onGripUp}
+        >
+          ⋮⋮
+        </span>
         <span className="lane__name" title={overlayLabel(effect, media?.name)}>
           <span className="lane__ico">{overlayIcon(effect)}</span>
           {overlayLabel(effect, media?.name)}
         </span>
         <div className="lane__controls">
+          <button
+            className={`lane__toggle${effect.pinned ? ' is-on' : ''}`}
+            title={effect.pinned ? 'Unpin row' : 'Pin row to top'}
+            aria-label={effect.pinned ? 'Unpin row' : 'Pin row to top'}
+            aria-pressed={!!effect.pinned}
+            onClick={() => toggleRowPinned({ type: 'overlay', id: effect.id, pinned: !!effect.pinned })}
+          >
+            📌
+          </button>
           <button
             className="lane__delete"
             title="Delete overlay"
@@ -282,16 +355,47 @@ function TrackLane({ trackId, pxPerFrame }: { trackId: string; pxPerFrame: numbe
   const removeTrack = useEditor((s) => s.removeTrack);
   const toggleMuted = useEditor((s) => s.toggleTrackMuted);
   const toggleHidden = useEditor((s) => s.toggleTrackHidden);
+  const toggleRowPinned = useEditor((s) => s.toggleRowPinned);
   const { setNodeRef, isOver } = useDroppable({ id: `track:${trackId}` });
   const track = project.tracks[trackId];
+  const grip = useRowReorder({
+    type: 'track',
+    id: trackId as TrackId,
+    kind: track?.kind ?? 'video',
+    pinned: !!track?.pinned,
+  });
   if (!track) return null;
   const clips = getTrackClips(project, track.id);
 
   return (
-    <div className={`lane lane--${track.kind}${track.hidden ? ' is-hidden' : ''}`}>
+    <div
+      className={`lane lane--${track.kind}${track.hidden ? ' is-hidden' : ''}`}
+      data-row-id={track.id}
+      data-row-group={track.kind}
+    >
       <div className="lane__label">
+        <span
+          className="lane__grip"
+          title="Drag to reorder"
+          onPointerDown={grip.onGripDown}
+          onPointerMove={grip.onGripMove}
+          onPointerUp={grip.onGripUp}
+        >
+          ⋮⋮
+        </span>
         <span className="lane__name">{track.name}</span>
         <div className="lane__controls">
+          <button
+            className={`lane__toggle${track.pinned ? ' is-on' : ''}`}
+            title={track.pinned ? 'Unpin row' : 'Pin row to top'}
+            aria-label={track.pinned ? 'Unpin row' : 'Pin row to top'}
+            aria-pressed={!!track.pinned}
+            onClick={() =>
+              toggleRowPinned({ type: 'track', id: track.id, kind: track.kind, pinned: !!track.pinned })
+            }
+          >
+            📌
+          </button>
           {track.kind === 'audio' ? (
             <button
               className={`lane__toggle${track.muted ? ' is-off' : ''}`}
@@ -377,6 +481,16 @@ function Ruler({
   );
 }
 
+/** Render one timeline row as its lane (overlay or track). */
+function LaneRow({ row, pxPerFrame }: { row: TimelineRow; pxPerFrame: number }) {
+  const effect = useEditor((s) => (row.type === 'overlay' ? s.project.effects[row.id] : undefined));
+  if (row.type === 'overlay') {
+    if (!effect) return null;
+    return <OverlayLane effect={effect} pxPerFrame={pxPerFrame} />;
+  }
+  return <TrackLane trackId={row.id} pxPerFrame={pxPerFrame} />;
+}
+
 export function Timeline() {
   const project = useEditor((s) => s.project);
   const playhead = useEditor((s) => s.playhead);
@@ -385,14 +499,14 @@ export function Timeline() {
   const selectClip = useEditor((s) => s.selectClip);
 
   const contentRef = useRef<HTMLDivElement>(null);
-  const tracks = getTracksInOrder(project);
-  // Overlays in creation order (object insertion order survives JSON round-trip);
-  // each gets its own lane above the tracks so its start/end is set visually.
-  const overlays = Object.values(project.effects);
+  // Ordered rows (overlays on top, then tracks), partitioned into a sticky
+  // pinned band + the scrolling remainder.
+  const rows = timelineRows(project);
+  const { pinned, scrolling } = partitionPinned(rows);
 
   // Reach the furthest overlay too, so a block dragged past the last clip stays
   // scrollable into view (overlays don't extend the document duration).
-  const lastOverlayEnd = overlays.reduce(
+  const lastOverlayEnd = Object.values(project.effects).reduce(
     (m, e) => Math.max(m, e.timing.start + e.timing.duration),
     0,
   );
@@ -429,11 +543,15 @@ export function Timeline() {
             durationFrames={minFrames}
             onScrub={scrubToClientX}
           />
-          {overlays.map((effect) => (
-            <OverlayLane key={effect.id} effect={effect} pxPerFrame={pxPerFrame} />
-          ))}
-          {tracks.map((track) => (
-            <TrackLane key={track.id} trackId={track.id} pxPerFrame={pxPerFrame} />
+          {pinned.length > 0 && (
+            <div className="timeline__pinned">
+              {pinned.map((row) => (
+                <LaneRow key={row.id} row={row} pxPerFrame={pxPerFrame} />
+              ))}
+            </div>
+          )}
+          {scrolling.map((row) => (
+            <LaneRow key={row.id} row={row} pxPerFrame={pxPerFrame} />
           ))}
           <div className="playhead" style={{ left: LABEL_WIDTH + playhead * pxPerFrame }} />
         </div>
