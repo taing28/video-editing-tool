@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { createEmptyProject } from '../core/model';
 import type { VideoClip, MediaAsset, TransitionType } from '../core/model';
-import { newClipId, newMediaId } from '../core/ids';
-import { addMedia, insertClip } from '../core/edits';
-import { buildScene, type ImageLayer } from './scene';
+import { newClipId, newMediaId, newEffectId } from '../core/ids';
+import { addMedia, insertClip, insertEffect } from '../core/edits';
+import { buildScene, type ImageLayer, type CaptionLayer } from './scene';
 
 function setup(transition: TransitionType) {
   let p = createEmptyProject({ fps: 30 });
@@ -170,5 +170,48 @@ describe('buildScene color adjust', () => {
     );
     expect(layer?.adjust?.brightness).toBe(1.2);
     expect(layer?.dynamic).toBe(true);
+  });
+});
+
+describe('buildScene karaoke captions', () => {
+  it('emits words + active word index for a karaoke caption', () => {
+    let p = createEmptyProject({ fps: 30 });
+    const id = newEffectId();
+    p = insertEffect(p, {
+      id,
+      type: 'caption',
+      timing: { start: 0, duration: 40 },
+      text: 'one two three four',
+      fontSize: 40,
+      fontFamily: 'sans',
+      color: '#fff',
+      karaoke: true,
+    } as unknown as import('../core/model').Effect);
+    const layerAt = (frame: number) =>
+      buildScene(p, frame, resolve).layers.find(
+        (l): l is CaptionLayer => l.kind === 'caption' && l.effectId === id,
+      );
+    const l0 = layerAt(0);
+    expect(l0?.words).toEqual(['one', 'two', 'three', 'four']);
+    expect(l0?.activeWordIndex).toBe(0); // frame 0 → word 0
+    expect(layerAt(35)?.activeWordIndex).toBe(3); // 35/40 → last word
+  });
+
+  it('omits karaoke fields for a plain caption', () => {
+    let p = createEmptyProject({ fps: 30 });
+    const id = newEffectId();
+    p = insertEffect(p, {
+      id,
+      type: 'caption',
+      timing: { start: 0, duration: 40 },
+      text: 'plain caption',
+      fontSize: 40,
+      fontFamily: 'sans',
+      color: '#fff',
+    } as unknown as import('../core/model').Effect);
+    const layer = buildScene(p, 10, resolve).layers.find(
+      (l): l is CaptionLayer => l.kind === 'caption' && l.effectId === id,
+    );
+    expect(layer?.words).toBeUndefined();
   });
 });

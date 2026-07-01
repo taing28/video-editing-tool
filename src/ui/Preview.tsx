@@ -36,6 +36,7 @@ import {
 } from '../render/scene';
 import { resolveMedia, getVideoElement } from '../media/registry';
 import { getFilteredCanvas } from '../render/colorFilter';
+import { layoutCaption } from '../render/captionLayout';
 import { getActiveVideoClips, sourceFrameAt } from '../core/selectors';
 import type { ClipId, EffectId } from '../core/ids';
 
@@ -302,6 +303,43 @@ export function Preview() {
                 );
               }
               // caption — centered, bottom-anchored, outlined
+              if (layer.words) {
+                // Karaoke: one text node per word (shared layout = export parity),
+                // the currently-spoken word painted in the highlight color.
+                const lineHeight = layer.fontSize * 1.2;
+                const capLines = layoutCaption(
+                  layer.words,
+                  layer.fontSize,
+                  layer.fontFamily,
+                  scene.width * 0.9,
+                );
+                const y0 = scene.height - capLines.length * lineHeight - layer.fontSize;
+                return (
+                  <Group key={layer.effectId} opacity={layer.opacity}>
+                    {capLines.flatMap((line, li) =>
+                      line.words.map((w) => (
+                        <KonvaText
+                          key={`${li}:${w.index}`}
+                          text={w.text}
+                          x={(scene.width - line.width) / 2 + w.x}
+                          y={y0 + li * lineHeight}
+                          fontSize={layer.fontSize}
+                          fontFamily={layer.fontFamily}
+                          fontStyle="700"
+                          fill={
+                            w.index === layer.activeWordIndex
+                              ? (layer.highlightColor ?? '#ffd400')
+                              : layer.color
+                          }
+                          stroke="rgba(0,0,0,0.85)"
+                          strokeWidth={Math.max(2, layer.fontSize * 0.12)}
+                          fillAfterStrokeEnabled
+                        />
+                      )),
+                    )}
+                  </Group>
+                );
+              }
               return (
                 <KonvaText
                   key={layer.effectId}

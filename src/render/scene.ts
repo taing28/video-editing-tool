@@ -22,6 +22,8 @@ import {
   fadeEnvelope,
   effectOpacity,
   overlapWithPrev,
+  captionWords,
+  activeCaptionWordIndex,
 } from '../core/selectors';
 import { kenBurnsBox } from './kenburns';
 import type { MediaId } from '../core/ids';
@@ -79,6 +81,12 @@ export interface CaptionLayer {
   color: string;
   /** 0..1 fade envelope from the effect's fadeIn/fadeOut. */
   opacity: number;
+  /** Karaoke: the flat word list; when present, renderers highlight one word. */
+  words?: string[];
+  /** Karaoke: index of the currently-spoken word (-1 = none). */
+  activeWordIndex?: number;
+  /** Karaoke: color of the active word. */
+  highlightColor?: string;
 }
 
 export interface ShapeLayer {
@@ -192,6 +200,13 @@ export function buildScene(
         opacity: fade,
       });
     } else if (effect.type === 'caption') {
+      const karaoke = effect.karaoke
+        ? {
+            words: captionWords(effect).map((w) => w.text),
+            activeWordIndex: activeCaptionWordIndex(effect, frame),
+            highlightColor: effect.highlightColor ?? '#ffd400',
+          }
+        : {};
       layers.push({
         kind: 'caption',
         effectId: effect.id,
@@ -200,6 +215,7 @@ export function buildScene(
         fontFamily: effect.fontFamily,
         color: effect.color,
         opacity: fade,
+        ...karaoke,
       });
     } else if (effect.type === 'shape') {
       layers.push({

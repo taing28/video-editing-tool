@@ -8,6 +8,7 @@
  */
 import type { Scene } from './scene';
 import { getFilteredCanvas } from './colorFilter';
+import { captionFont, layoutCaption } from './captionLayout';
 
 export function paintScene(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -72,20 +73,38 @@ export function paintScene(
       ctx.globalAlpha = layer.opacity;
       const lineHeight = layer.fontSize * 1.2;
       const margin = layer.fontSize;
-      const y0 = scene.height - layer.lines.length * lineHeight - margin;
-      const cx = scene.width / 2;
-      ctx.font = `700 ${layer.fontSize}px ${layer.fontFamily}`;
-      ctx.textAlign = 'center';
+      ctx.font = captionFont(layer.fontSize, layer.fontFamily);
       ctx.textBaseline = 'top';
       ctx.lineJoin = 'round';
       ctx.strokeStyle = 'rgba(0,0,0,0.85)';
       ctx.lineWidth = Math.max(2, layer.fontSize * 0.12);
-      ctx.fillStyle = layer.color;
-      layer.lines.forEach((line, i) => {
-        const y = y0 + i * lineHeight;
-        ctx.strokeText(line, cx, y);
-        ctx.fillText(line, cx, y);
-      });
+      if (layer.words) {
+        // Karaoke: place each word, highlight the currently-spoken one.
+        const lines = layoutCaption(layer.words, layer.fontSize, layer.fontFamily, scene.width * 0.9);
+        const y0 = scene.height - lines.length * lineHeight - margin;
+        ctx.textAlign = 'left';
+        lines.forEach((line, li) => {
+          const lineX = (scene.width - line.width) / 2;
+          const y = y0 + li * lineHeight;
+          for (const w of line.words) {
+            const x = lineX + w.x;
+            ctx.strokeText(w.text, x, y);
+            ctx.fillStyle =
+              w.index === layer.activeWordIndex ? (layer.highlightColor ?? '#ffd400') : layer.color;
+            ctx.fillText(w.text, x, y);
+          }
+        });
+      } else {
+        const y0 = scene.height - layer.lines.length * lineHeight - margin;
+        const cx = scene.width / 2;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = layer.color;
+        layer.lines.forEach((line, i) => {
+          const y = y0 + i * lineHeight;
+          ctx.strokeText(line, cx, y);
+          ctx.fillText(line, cx, y);
+        });
+      }
       ctx.globalAlpha = 1;
     }
   }
