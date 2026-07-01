@@ -529,6 +529,38 @@ try {
   );
   assert(imgX1 > imgX0 + 3, `image overlay dragged on the preview (${imgX0} -> ${imgX1})`);
 
+  log('STEP 13h — reorder + pin overlay/track lanes');
+  // Several overlay lanes now exist (text, captions, shape, lower-third, image).
+  const overlayIdsTopDown = await page.$$eval('.lane--overlay', (els) =>
+    els.map((e) => e.getAttribute('data-row-id')),
+  );
+  assert(overlayIdsTopDown.length >= 2, 'multiple overlay lanes present to reorder');
+  // Drag the top overlay lane's grip down past the second lane.
+  const firstGrip = page.locator('.lane--overlay .lane__grip').first();
+  const box1 = await firstGrip.boundingBox();
+  const secondLane = page.locator('.lane--overlay').nth(1);
+  const box2 = await secondLane.boundingBox();
+  await page.mouse.move(box1.x + box1.width / 2, box1.y + box1.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box1.x + box1.width / 2, box2.y + box2.height + 4, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(120);
+  const afterIds = await page.$$eval('.lane--overlay', (els) =>
+    els.map((e) => e.getAttribute('data-row-id')),
+  );
+  assert(
+    afterIds[0] !== overlayIdsTopDown[0],
+    `top overlay lane changed after reorder (${overlayIdsTopDown[0]} -> ${afterIds[0]})`,
+  );
+
+  // Pin the Video track row; it should move into the sticky pinned band.
+  await page.locator('.lane--video [aria-label="Pin row to top"]').first().click();
+  await page.waitForTimeout(80);
+  assert(
+    (await page.locator('.timeline__pinned .lane--video').count()) === 1,
+    'pinning the video row moves it into the sticky band',
+  );
+
   log('STEP 14 — transition between the two video clips (overlap + wipe style)');
   await page.locator('.lane--video .clip').nth(1).click(); // select the 2nd (later) clip
   await page.waitForSelector('button:has-text("Add transition")');
@@ -644,8 +676,9 @@ try {
   );
 
   log('STEP 19 — mute audio track / hide video track');
-  await page.locator('.lane--audio .lane__toggle').first().click();
-  await page.locator('.lane--video .lane__toggle').first().click();
+  // Target by aria-label — the new 📌 pin button also uses .lane__toggle.
+  await page.locator('.lane--audio [aria-label="Mute track"]').first().click();
+  await page.locator('.lane--video [aria-label="Hide track"]').first().click();
   const flags = await page.evaluate(() => {
     const t = Object.values(window.__editor.getState().project.tracks);
     return {
