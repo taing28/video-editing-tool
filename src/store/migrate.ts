@@ -22,5 +22,9 @@ export function migrateProject(project: Project): Project {
       c.adjust = { brightness: 1, contrast: 1, saturate: 1 };
     if (c.kind === 'audio' && typeof c.duck !== 'boolean') c.duck = false;
   }
+  const loose = project as { effectOrder?: unknown };
+  if (!Array.isArray(loose.effectOrder)) {
+    loose.effectOrder = Object.keys(project.effects);
+  }
   return project;
 }

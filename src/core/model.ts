@@ -159,6 +159,8 @@ export interface BaseEffect {
   type: string;
   /** When the effect is active, in timeline frames — independent of any clip. */
   timing: FrameRange;
+  /** Keep this overlay's lane stuck at the top of the timeline. */
+  pinned?: boolean;
   /** Opacity ramp-in over this many frames at the start of `timing` (0 = none). */
   fadeInFrames?: Frames;
   /** Opacity ramp-out over this many frames at the end of `timing` (0 = none). */
@@ -228,6 +230,8 @@ export interface Track {
   clipOrder: ClipId[];
   muted: boolean;
   hidden: boolean;
+  /** Keep this lane stuck at the top of the timeline. */
+  pinned?: boolean;
 }
 
 export interface Project {
@@ -249,6 +253,8 @@ export interface Project {
   media: Record<string, MediaAsset>;
   /** Global timed overlays (text, etc.), keyed by id. */
   effects: Record<string, Effect>;
+  /** Overlay lane order, bottom-to-top paint order (index 0 paints first). */
+  effectOrder: EffectId[];
 }
 
 // ---------------------------------------------------------------------------
@@ -301,6 +307,7 @@ export function createEmptyProject(opts: NewProjectOptions = {}): Project {
     clips: {},
     media: {},
     effects: {},
+    effectOrder: [],
   };
 }
 
