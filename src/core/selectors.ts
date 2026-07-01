@@ -5,9 +5,9 @@
  * SOURCE OF TRUTH for "what is on screen / audible at frame N", consumed
  * identically by the preview renderer and (later) the export renderer.
  */
-import type { Project, Track, Clip, VideoClip, AudioClip, Effect } from './model';
+import type { Project, Track, Clip, VideoClip, AudioClip, Effect, TrackKind } from './model';
 import { isVideoClip, isAudioClip } from './model';
-import type { ClipId, TrackId } from './ids';
+import type { ClipId, TrackId, EffectId } from './ids';
 import type { Frames } from './time';
 import { rangeContains, rangeEnd } from './time';
 
@@ -73,9 +73,14 @@ export function getActiveAudioClips(
   return out;
 }
 
-/** Global timed overlays active at `frame`, in id-stable order. */
+/** Global timed overlays active at `frame`, in effectOrder (bottom-to-top paint order). */
 export function getActiveEffects(p: Project, frame: Frames): Effect[] {
-  return Object.values(p.effects).filter((e) => rangeContains(e.timing, frame));
+  const out: Effect[] = [];
+  for (const id of p.effectOrder) {
+    const e = p.effects[id];
+    if (e && rangeContains(e.timing, frame)) out.push(e);
+  }
+  return out;
 }
 
 /**
@@ -176,4 +181,29 @@ export function computeDuration(p: Project): Frames {
 export function trackOfClip(p: Project, clipId: ClipId): Track | undefined {
   const clip = p.clips[clipId];
   return clip ? p.tracks[clip.trackId] : undefined;
+}
+
+export type TimelineRow =
+  | { type: 'overlay'; id: EffectId; pinned: boolean }
+  | { type: 'track'; id: TrackId; kind: TrackKind; pinned: boolean };
+
+/** Display order, top-to-bottom: overlays (top lane = last in effectOrder), then tracks. */
+export function timelineRows(p: Project): TimelineRow[] {
+  const rows: TimelineRow[] = [];
+  for (let i = p.effectOrder.length - 1; i >= 0; i--) {
+    const e = p.effects[p.effectOrder[i]];
+    if (e) rows.push({ type: 'overlay', id: e.id, pinned: !!e.pinned });
+  }
+  for (const t of getTracksInOrder(p)) {
+    rows.push({ type: 'track', id: t.id, kind: t.kind, pinned: !!t.pinned });
+  }
+  return rows;
+}
+
+/** Split rows into the sticky pinned band and the scrolling remainder (order kept). */
+export function partitionPinned(rows: TimelineRow[]): {
+  pinned: TimelineRow[];
+  scrolling: TimelineRow[];
+} {
+  return { pinned: rows.filter((r) => r.pinned), scrolling: rows.filter((r) => !r.pinned) };
 }
