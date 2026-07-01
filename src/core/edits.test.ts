@@ -15,6 +15,8 @@ import {
   fitClip,
   duplicateClip,
   insertEffect,
+  removeEffect,
+  duplicateEffect,
   moveEffect,
   trimEffectStart,
   trimEffectEnd,
@@ -392,5 +394,43 @@ describe('removeMedia drops image overlays referencing it', () => {
     const after = removeMedia(p, mediaId);
     expect(after.media[mediaId]).toBeUndefined();
     expect(after.effects[effId]).toBeUndefined(); // dangling overlay cleaned up
+  });
+});
+
+describe('effectOrder maintenance', () => {
+  const txt = (id: string) =>
+    ({
+      id,
+      type: 'text',
+      timing: { start: 0, duration: 30 },
+      text: 't',
+      fontSize: 40,
+      fontWeight: 700,
+      fontFamily: 'sans',
+      color: '#fff',
+      x: 0,
+      y: 0,
+      align: 'left',
+    }) as unknown as Effect;
+
+  it('insertEffect appends, removeEffect prunes', () => {
+    let p = createEmptyProject({ fps: 30 });
+    p = insertEffect(p, txt('a'));
+    p = insertEffect(p, txt('b'));
+    expect(p.effectOrder).toEqual(['a', 'b']);
+    p = removeEffect(p, 'a' as unknown as Parameters<typeof removeEffect>[1]);
+    expect(p.effectOrder).toEqual(['b']);
+  });
+
+  it('duplicateEffect inserts the copy right after the original', () => {
+    let p = createEmptyProject({ fps: 30 });
+    p = insertEffect(p, txt('a'));
+    p = insertEffect(p, txt('b'));
+    p = duplicateEffect(
+      p,
+      'a' as unknown as Parameters<typeof duplicateEffect>[1],
+      'a2' as unknown as Parameters<typeof duplicateEffect>[2],
+    );
+    expect(p.effectOrder).toEqual(['a', 'a2', 'b']);
   });
 });

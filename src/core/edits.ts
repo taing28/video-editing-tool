@@ -72,10 +72,15 @@ export function removeMedia(p: Project, mediaId: MediaId): Project {
   // Image overlays reference media too — drop any that point at this asset so
   // we don't leave a dangling reference behind.
   const effects = { ...p.effects };
+  const removedEffectIds: string[] = [];
   for (const eff of Object.values(p.effects)) {
-    if (eff.type === 'image' && eff.mediaId === mediaId) delete effects[eff.id];
+    if (eff.type === 'image' && eff.mediaId === mediaId) {
+      delete effects[eff.id];
+      removedEffectIds.push(eff.id);
+    }
   }
-  return recompute({ ...p, media, clips, tracks, effects });
+  const effectOrder = p.effectOrder.filter((id) => !removedEffectIds.includes(id));
+  return recompute({ ...p, media, clips, tracks, effects, effectOrder });
 }
 
 // --- clips ------------------------------------------------------------------
@@ -319,7 +324,11 @@ export function setClipFade(
 // --- effects ----------------------------------------------------------------
 
 export function insertEffect(p: Project, effect: Effect): Project {
-  return { ...p, effects: { ...p.effects, [effect.id]: effect } };
+  return {
+    ...p,
+    effects: { ...p.effects, [effect.id]: effect },
+    effectOrder: [...p.effectOrder, effect.id],
+  };
 }
 
 export function updateEffect(p: Project, effectId: EffectId, patch: Partial<Effect>): Project {
@@ -334,7 +343,7 @@ export function removeEffect(p: Project, effectId: EffectId): Project {
   if (!p.effects[effectId]) return p;
   const effects = { ...p.effects };
   delete effects[effectId];
-  return { ...p, effects };
+  return { ...p, effects, effectOrder: p.effectOrder.filter((id) => id !== effectId) };
 }
 
 // --- overlay timing (timeline lanes) ---------------------------------------
@@ -470,7 +479,12 @@ export function duplicateEffect(p: Project, effectId: EffectId, newId: EffectId)
   else if (eff.type === 'shape') copy = { ...eff, id: newId, x: eff.x + 20, y: eff.y + 20 };
   else if (eff.type === 'image') copy = { ...eff, id: newId, x: eff.x + 20, y: eff.y + 20 };
   else copy = { ...eff, id: newId };
-  return { ...p, effects: { ...p.effects, [newId]: copy } };
+  const i = p.effectOrder.indexOf(effectId);
+  const effectOrder =
+    i < 0
+      ? [...p.effectOrder, newId]
+      : [...p.effectOrder.slice(0, i + 1), newId, ...p.effectOrder.slice(i + 1)];
+  return { ...p, effects: { ...p.effects, [newId]: copy }, effectOrder };
 }
 
 /** Set a video/image clip's transition-in style. */
