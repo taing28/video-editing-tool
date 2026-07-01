@@ -5,7 +5,16 @@
  * SOURCE OF TRUTH for "what is on screen / audible at frame N", consumed
  * identically by the preview renderer and (later) the export renderer.
  */
-import type { Project, Track, Clip, VideoClip, AudioClip, Effect, TrackKind } from './model';
+import type {
+  Project,
+  Track,
+  Clip,
+  VideoClip,
+  AudioClip,
+  Effect,
+  CaptionEffect,
+  TrackKind,
+} from './model';
 import { isVideoClip, isAudioClip } from './model';
 import type { ClipId, TrackId, EffectId } from './ids';
 import type { Frames } from './time';
@@ -119,6 +128,39 @@ export function fadeMultiplier(clip: Clip, frame: Frames): number {
     clip.fadeInFrames,
     clip.fadeOutFrames,
   );
+}
+
+/** One karaoke word with start/end OFFSETS (frames) from the caption's start. */
+export interface CaptionWord {
+  text: string;
+  start: Frames;
+  end: Frames;
+}
+
+/**
+ * Split a caption into words, evenly timed across its duration. Deterministic
+ * and pure (no speech data needed) — the highlight sweeps at a constant rate.
+ */
+export function captionWords(effect: CaptionEffect): CaptionWord[] {
+  const words = effect.text.split(/\s+/).filter(Boolean);
+  const n = words.length;
+  if (n === 0) return [];
+  const dur = Math.max(1, effect.timing.duration);
+  return words.map((text, i) => ({
+    text,
+    start: Math.round((i * dur) / n),
+    end: Math.round(((i + 1) * dur) / n),
+  }));
+}
+
+/** Index of the karaoke word active at `frame`, or -1 if none. */
+export function activeCaptionWordIndex(effect: CaptionEffect, frame: Frames): number {
+  const into = frame - effect.timing.start;
+  const words = captionWords(effect);
+  for (let i = 0; i < words.length; i++) {
+    if (into >= words[i].start && into < words[i].end) return i;
+  }
+  return -1;
 }
 
 /** Opacity envelope (0..1) for a timed overlay, from its own fadeIn/fadeOut. */

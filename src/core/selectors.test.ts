@@ -1,9 +1,52 @@
 import { describe, it, expect } from 'vitest';
 import { createEmptyProject } from './model';
-import type { Effect, Project } from './model';
+import type { CaptionEffect, Effect, Project } from './model';
 import { insertEffect } from './edits';
 import { newEffectId } from './ids';
-import { getActiveEffects, timelineRows, partitionPinned } from './selectors';
+import {
+  getActiveEffects,
+  timelineRows,
+  partitionPinned,
+  captionWords,
+  activeCaptionWordIndex,
+} from './selectors';
+
+const cap = (text: string, start: number, duration: number): CaptionEffect => ({
+  id: 'c' as unknown as CaptionEffect['id'],
+  type: 'caption',
+  timing: { start, duration },
+  text,
+  fontSize: 40,
+  fontFamily: 'sans',
+  color: '#fff',
+  karaoke: true,
+});
+
+describe('captionWords (karaoke, even timing)', () => {
+  it('splits text into evenly-timed words (offsets from timing.start)', () => {
+    expect(captionWords(cap('a b c d', 0, 40))).toEqual([
+      { text: 'a', start: 0, end: 10 },
+      { text: 'b', start: 10, end: 20 },
+      { text: 'c', start: 20, end: 30 },
+      { text: 'd', start: 30, end: 40 },
+    ]);
+  });
+  it('handles newlines + extra spaces + empty', () => {
+    expect(captionWords(cap('  one\ntwo  ', 0, 20)).map((w) => w.text)).toEqual(['one', 'two']);
+    expect(captionWords(cap('   ', 0, 20))).toEqual([]);
+  });
+});
+
+describe('activeCaptionWordIndex', () => {
+  it('returns the word under the frame, -1 outside', () => {
+    const c = cap('a b c d', 100, 40); // words at offsets 0..10,10..20,20..30,30..40
+    expect(activeCaptionWordIndex(c, 100)).toBe(0);
+    expect(activeCaptionWordIndex(c, 115)).toBe(1);
+    expect(activeCaptionWordIndex(c, 139)).toBe(3);
+    expect(activeCaptionWordIndex(c, 99)).toBe(-1);
+    expect(activeCaptionWordIndex(c, 140)).toBe(-1);
+  });
+});
 
 function withTwoOverlays(): { p: Project; a: string; b: string } {
   let p = createEmptyProject({ fps: 30 });

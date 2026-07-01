@@ -187,6 +187,10 @@ export interface CaptionEffect extends BaseEffect {
   fontSize: number;
   fontFamily: string;
   color: string;
+  /** Karaoke mode: highlight each word in turn as it's spoken. */
+  karaoke?: boolean;
+  /** Color of the currently-spoken word in karaoke mode (default accent). */
+  highlightColor?: string;
 }
 
 export interface ShapeEffect extends BaseEffect {
