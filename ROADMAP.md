@@ -17,7 +17,7 @@ npm run verify   # FULL gate: typecheck + unit + e2e + export + video + persist
 Architecture overview + file map: see `README.md`. Tests live in `scripts/` (Playwright)
 and `src/**/*.test.ts` (Vitest).
 
-## Status: Timeline row reorder + pin complete ✅ — `npm run verify` green (67 unit + e2e + export + video + persist)
+## Status: Karaoke captions complete ✅ — `npm run verify` green (75 unit + e2e + export + video + persist)
 
 ### Timeline row reorder + pin (executed from docs/superpowers/plans/2026-07-01-timeline-row-reorder-pin.md)
 - `Project.effectOrder` (bottom-to-top paint order) + `Track.pinned`/`BaseEffect.pinned`; migrated for old docs.
@@ -164,11 +164,12 @@ Spec: `docs/superpowers/specs/2026-07-01-timeline-overlays-scroll-design.md`.
 
 ### Recommended next (2026-07-01 — best fit for the voice + picture + captions workflow)
 
-- [ ] **Karaoke / animated captions** ⭐ — word-level captions that highlight each word as it's
-  spoken (Reels/TikTok style). Reuses the on-device Whisper pipeline: switch `transcribe.ts` to
-  word timestamps (`return_timestamps: 'word'`), store per-word `{text, start, end}` on the caption
-  effect, and render a "current word" highlight in BOTH preview (Konva) and export (`paint.ts`) —
-  keep parity via one shared word-at-frame helper in `scene.ts`.
+- [x] **Karaoke / animated captions** ⭐ ✅ done — captions highlight each word in turn as it's
+  spoken. v1 uses EVEN word timing (`captionWords`/`activeCaptionWordIndex` selectors; no speech
+  data needed); auto-captions default it on; inspector toggle + highlight color. Parity via a
+  shared `render/captionLayout.ts` (offscreen measure) used by both preview (Konva word nodes) and
+  export (`paint.ts`). FOLLOW-UP: real speech-synced word timing (switch `transcribe.ts` to
+  `return_timestamps:'word'` and store per-word timings, preferred over the even fallback).
 - [ ] **Slideshow builder** — multi-select library images and drop them as one timed sequence with
   a default per-image duration + optional auto Ken Burns and crossfades between shots. A store
   action that appends N image clips (each with `motion` + a small overlap) in one undo step.
