@@ -20,8 +20,10 @@ import {
 const tmp = path.join(os.tmpdir(), 'video-editor-e2e');
 mkdirSync(tmp, { recursive: true });
 const pngPath = path.join(tmp, 'gradient.png');
+const pngPath2 = path.join(tmp, 'gradient2.png');
 const wavPath = path.join(tmp, 'tone.wav');
 writeFileSync(pngPath, makePng(640, 360));
+writeFileSync(pngPath2, makePng(320, 480));
 writeFileSync(wavPath, makeWav(2));
 
 const SHOT = process.argv.includes('--shot')
@@ -162,6 +164,37 @@ try {
   assert(await page.locator('.media-card').count() === 2, 'two media cards appear');
   assert(await page.locator('.media-card--image').count() === 1, 'image card present');
   assert(await page.locator('.media-card--audio').count() === 1, 'audio card present');
+
+  log('STEP 2b — slideshow builder (2 images → sequenced clips, then undo)');
+  await page.setInputFiles('.library input[type=file]', [pngPath2]); // a 2nd image
+  await page.waitForFunction(() => document.querySelectorAll('.media-card--image').length === 2);
+  await page.click('.slideshow__go');
+  await page.waitForFunction(() => document.querySelectorAll('.lane--video .clip').length === 2);
+  const slideshow = await page.evaluate(() => {
+    const p = window.__editor.getState().project;
+    const vids = Object.values(p.clips)
+      .filter((c) => c.kind !== 'audio')
+      .sort((a, b) => a.startFrame - b.startFrame);
+    return {
+      count: vids.length,
+      end0: vids[0].startFrame + vids[0].durationInFrames,
+      start1: vids[1].startFrame,
+      motion0: vids[0].motion,
+    };
+  });
+  assert(slideshow.count === 2, 'slideshow added 2 image clips');
+  assert(
+    slideshow.start1 < slideshow.end0,
+    `2nd clip overlaps the 1st for a crossfade (${slideshow.start1} < ${slideshow.end0})`,
+  );
+  assert(slideshow.motion0 !== 'none', `Ken Burns applied (motion=${slideshow.motion0})`);
+  // Undo the whole slideshow in one step; remove the extra image so later steps
+  // see a single image card again.
+  await page.click('[aria-label="Undo"]');
+  await page.waitForFunction(() => document.querySelectorAll('.lane--video .clip').length === 0);
+  await page.locator('.media-card--image').nth(1).hover();
+  await page.locator('.media-card--image').nth(1).locator('.media-card__delete').click();
+  await page.waitForFunction(() => document.querySelectorAll('.media-card--image').length === 1);
 
   log('STEP 3 — add image to video track (double-click)');
   await page.dblclick('.media-card--image');

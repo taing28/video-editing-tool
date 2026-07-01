@@ -603,6 +603,45 @@
   flex-direction: column;
   gap: 8px;
 }
+
+/* one-click slideshow builder */
+.slideshow {
+  margin: 8px 10px 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel-2);
+}
+.slideshow__go {
+  width: 100%;
+  justify-content: center;
+}
+.slideshow__opts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+.slideshow__opt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.slideshow__opt input[type='number'] {
+  width: 52px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 3px 6px;
+  font: inherit;
+}
+.slideshow__opt--check {
+  cursor: pointer;
+}
 .library__empty {
   color: var(--muted);
   font-size: 12px;

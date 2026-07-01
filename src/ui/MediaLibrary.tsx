@@ -5,12 +5,12 @@
  * (drag onto a timeline track to add it) and also supports click-to-add as a
  * keyboard/'no-drag' fallback.
  */
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { useEditor } from '../store/editorStore';
 import type { MediaAsset } from '../core/model';
 import { getTracksInOrder } from '../core/selectors';
-import { framesToSeconds } from '../core/time';
+import { framesToSeconds, secondsToFrames } from '../core/time';
 import { mediaFitsTrack } from '../core/edits';
 
 function MediaCard({ asset }: { asset: MediaAsset }) {
@@ -71,11 +71,25 @@ export function MediaLibrary() {
   const mediaMap = useEditor((s) => s.project.media);
   const media = Object.values(mediaMap);
   const importMedia = useEditor((s) => s.importMedia);
+  const buildSlideshow = useEditor((s) => s.buildSlideshow);
+  const fps = useEditor((s) => s.project.fps);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const imageCount = media.filter((m) => m.kind === 'image').length;
+  const [secs, setSecs] = useState(4);
+  const [kenBurns, setKenBurns] = useState(true);
+  const [crossfade, setCrossfade] = useState(true);
 
   const onPick = (files: FileList | null) => {
     if (files && files.length) void importMedia(Array.from(files));
   };
+
+  const makeSlideshow = () =>
+    buildSlideshow({
+      durationInFrames: secondsToFrames(Math.max(0.5, secs), fps),
+      motion: kenBurns,
+      crossfadeFrames: crossfade ? secondsToFrames(0.5, fps) : 0,
+    });
 
   return (
     <aside
@@ -100,6 +114,48 @@ export function MediaLibrary() {
           onChange={(e) => onPick(e.target.files)}
         />
       </div>
+
+      {imageCount >= 1 && (
+        <div className="slideshow">
+          <div className="slideshow__row">
+            <button
+              className="btn btn--sm slideshow__go"
+              onClick={makeSlideshow}
+              data-tip="Add all imported images to the video track as a timed sequence, in one step."
+            >
+              🎞 Make slideshow ({imageCount})
+            </button>
+          </div>
+          <div className="slideshow__opts">
+            <label className="slideshow__opt">
+              <span>Sec/image</span>
+              <input
+                type="number"
+                min={0.5}
+                step={0.5}
+                value={secs}
+                onChange={(e) => setSecs(Number(e.target.value))}
+              />
+            </label>
+            <label className="slideshow__opt slideshow__opt--check">
+              <input
+                type="checkbox"
+                checked={kenBurns}
+                onChange={(e) => setKenBurns(e.target.checked)}
+              />
+              <span>Ken Burns</span>
+            </label>
+            <label className="slideshow__opt slideshow__opt--check">
+              <input
+                type="checkbox"
+                checked={crossfade}
+                onChange={(e) => setCrossfade(e.target.checked)}
+              />
+              <span>Crossfade</span>
+            </label>
+          </div>
+        </div>
+      )}
 
       <div className="library__list">
         {media.length === 0 ? (
