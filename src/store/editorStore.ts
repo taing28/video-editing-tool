@@ -64,8 +64,12 @@ import {
   moveEffect as moveEffectEdit,
   trimEffectStart as trimEffectStartEdit,
   trimEffectEnd as trimEffectEndEdit,
+  reorderEffectRelative as reorderEffectRelativeEdit,
+  reorderTrackRelative as reorderTrackRelativeEdit,
+  setEffectPinned as setEffectPinnedEdit,
+  setTrackPinned as setTrackPinnedEdit,
 } from '../core/edits';
-import { computeDuration } from '../core/selectors';
+import { computeDuration, type TimelineRow } from '../core/selectors';
 import { importFile, disposeUnusedMedia } from '../media/registry';
 import { exportProject, type ExportOptions } from '../render/export';
 import * as audioEngine from '../playback/audioEngine';
@@ -106,6 +110,10 @@ export interface EditorState {
   removeTrack: (trackId: TrackId) => void;
   toggleTrackMuted: (trackId: TrackId) => void;
   toggleTrackHidden: (trackId: TrackId) => void;
+  /** Move a row before/after a sibling of the same group (overlay/track). */
+  reorderRow: (row: TimelineRow, targetId: string, displayPlace: 'above' | 'below') => void;
+  /** Pin/unpin a row so it sticks to the top of the timeline. */
+  toggleRowPinned: (row: TimelineRow) => void;
   setCanvasSize: (width: number, height: number) => void;
   renameProject: (name: string) => void;
   setFps: (fps: number) => void;
@@ -250,6 +258,29 @@ export const useEditor = create<EditorState>((set, get) => {
 
     toggleTrackMuted: (trackId) => commit((p) => toggleTrackMutedEdit(p, trackId)),
     toggleTrackHidden: (trackId) => commit((p) => toggleTrackHiddenEdit(p, trackId)),
+
+    reorderRow: (row, targetId, displayPlace) => {
+      if (row.id === targetId) return;
+      if (row.type === 'overlay') {
+        // Overlay lanes are shown in REVERSE effectOrder, so "above in display"
+        // means "later in effectOrder" (more on top) → 'after'.
+        const place = displayPlace === 'above' ? 'after' : 'before';
+        commit((p) => reorderEffectRelativeEdit(p, row.id as never, targetId as never, place));
+      } else {
+        // Track lanes are shown in trackOrder forward; "above" = earlier = 'before'.
+        const place = displayPlace === 'above' ? 'before' : 'after';
+        commit((p) => reorderTrackRelativeEdit(p, row.id as never, targetId as never, place));
+      }
+    },
+
+    toggleRowPinned: (row) => {
+      if (row.type === 'overlay') {
+        commit((p) => setEffectPinnedEdit(p, row.id as never, !row.pinned));
+      } else {
+        commit((p) => setTrackPinnedEdit(p, row.id as never, !row.pinned));
+      }
+    },
+
     setCanvasSize: (width, height) => commit((p) => setCanvasSizeEdit(p, width, height)),
     // Rename goes through history, but a typing burst coalesces into ONE undo
     // entry (so later undos can't silently revert the name).
