@@ -31,6 +31,7 @@ import type { Frames } from '../core/time';
 import { clampFrame, secondsToFrames } from '../core/time';
 import {
   addMedia,
+  buildSlideshow as buildSlideshowEdit,
   duplicateClip as duplicateClipEdit,
   duplicateEffect as duplicateEffectEdit,
   insertClip,
@@ -125,6 +126,12 @@ export interface EditorState {
   // media + clips
   importMedia: (files: File[]) => Promise<void>;
   removeMedia: (mediaId: MediaId) => void;
+  /** Append every image asset as a timed slideshow on the video track. */
+  buildSlideshow: (opts: {
+    durationInFrames: number;
+    motion: boolean;
+    crossfadeFrames: number;
+  }) => void;
   addClipFromMedia: (mediaId: MediaId, trackId: TrackId) => void;
   removeSelected: () => void;
   /** Duplicate the selected clip (appended on its track) or overlay (nudged). */
@@ -319,6 +326,15 @@ export const useEditor = create<EditorState>((set, get) => {
       // Keep the runtime/IDB blob so undo can bring the clips back this session.
       commit((p) => removeMediaEdit(p, mediaId));
       if (selectionRemoved) set({ selectedClipId: null });
+    },
+
+    buildSlideshow: (opts) => {
+      const imageCount = Object.values(get().project.media).filter(
+        (m) => m.kind === 'image',
+      ).length;
+      if (imageCount === 0) return;
+      const ids = Array.from({ length: imageCount }, () => newClipId());
+      commit((p) => buildSlideshowEdit(p, ids, opts));
     },
 
     addClipFromMedia: (mediaId, trackId) => {

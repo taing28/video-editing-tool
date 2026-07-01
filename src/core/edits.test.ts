@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createEmptyProject, coverBox, containedBox } from './model';
-import type { VideoClip, MediaAsset } from './model';
+import type { VideoClip, MediaAsset, Clip } from './model';
 import { newClipId, newMediaId, newEffectId } from './ids';
 import {
   addMedia,
@@ -14,6 +14,7 @@ import {
   setClipSpeed,
   fitClip,
   duplicateClip,
+  buildSlideshow,
   insertEffect,
   removeEffect,
   duplicateEffect,
@@ -465,5 +466,50 @@ describe('reorder + pin reducers', () => {
     const p = createEmptyProject({ fps: 30 });
     const track = p.trackOrder[0];
     expect(setTrackPinned(p, track as never, true).tracks[track].pinned).toBe(true);
+  });
+});
+
+describe('buildSlideshow', () => {
+  function twoImages() {
+    let p = createEmptyProject({ fps: 30 });
+    const m1 = newMediaId();
+    const m2 = newMediaId();
+    p = addMedia(p, { id: m1, kind: 'image', name: 'a', src: 'blob:a', durationInFrames: 150, width: 1920, height: 1080 });
+    p = addMedia(p, { id: m2, kind: 'image', name: 'b', src: 'blob:b', durationInFrames: 150, width: 1080, height: 1920 });
+    return p;
+  }
+
+  it('appends all image media as a crossfading, animated sequence', () => {
+    const p = twoImages();
+    const c1 = newClipId();
+    const c2 = newClipId();
+    const out = buildSlideshow(p, [c1, c2], {
+      durationInFrames: 120,
+      motion: true,
+      crossfadeFrames: 15,
+    });
+    const video = out.trackOrder[0];
+    expect(out.tracks[video].clipOrder).toEqual([c1, c2]);
+    expect(out.clips[c1].startFrame).toBe(0);
+    expect(out.clips[c1].durationInFrames).toBe(120);
+    expect(out.clips[c2].startFrame).toBe(105); // 120 − 15 crossfade overlap
+    const m = (c: Clip) => (c.kind !== 'audio' ? c.motion : null);
+    expect(m(out.clips[c1])).toBe('zoomIn');
+    expect(m(out.clips[c2])).toBe('zoomOut');
+  });
+
+  it('honours motion:false (no Ken Burns) and 0 crossfade (abutting)', () => {
+    const p = twoImages();
+    const c1 = newClipId();
+    const c2 = newClipId();
+    const out = buildSlideshow(p, [c1, c2], { durationInFrames: 120, motion: false, crossfadeFrames: 0 });
+    expect(out.clips[c2].startFrame).toBe(120); // abuts
+    const m = (c: Clip) => (c.kind !== 'audio' ? c.motion : null);
+    expect(m(out.clips[c1])).toBe('none');
+  });
+
+  it('is a no-op with no images', () => {
+    const p = createEmptyProject({ fps: 30 });
+    expect(buildSlideshow(p, [], { durationInFrames: 120, motion: false, crossfadeFrames: 0 })).toBe(p);
   });
 });

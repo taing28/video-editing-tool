@@ -6,7 +6,17 @@
  * so these stay deterministic and trivially testable. Undo/redo is handled by
  * the store snapshotting the document around each call.
  */
-import type { Project, Clip, VideoClip, Track, MediaAsset, Effect, FitMode, Transform } from './model';
+import type {
+  Project,
+  Clip,
+  VideoClip,
+  Track,
+  MediaAsset,
+  Effect,
+  FitMode,
+  Transform,
+  KenBurns,
+} from './model';
 import { getMedia, isVideoClip, containedBox, coverBox } from './model';
 import type { ClipId, EffectId, MediaId, TrackId } from './ids';
 import type { Frames } from './time';
@@ -395,6 +405,54 @@ export function trimEffectEnd(p: Project, effectId: EffectId, newEnd: Frames): P
  * on `track`. The caller supplies the id. Duration defaults to the media's
  * natural length (images get a default still length).
  */
+/**
+ * Append every image asset as a timed sequence on the first video track — a
+ * one-click slideshow. Optional Ken Burns (alternating pan/zoom) + a crossfade
+ * overlap (each clip starts `crossfadeFrames` before the previous ends, which
+ * the existing overlap→dissolve renderer turns into a cross-dissolve).
+ * `clipIds` must supply one id per image (the store generates them).
+ */
+export function buildSlideshow(
+  p: Project,
+  clipIds: ClipId[],
+  opts: { durationInFrames: number; motion: boolean; crossfadeFrames: number },
+): Project {
+  const track = p.trackOrder.map((id) => p.tracks[id]).find((t) => t?.kind === 'video');
+  const images = Object.values(p.media).filter((m) => m.kind === 'image');
+  if (!track || images.length === 0 || clipIds.length < images.length) return p;
+  const dur = Math.max(1, Math.round(opts.durationInFrames));
+  const overlap = Math.max(0, Math.min(dur - 1, Math.round(opts.crossfadeFrames)));
+  const motions: KenBurns[] = ['zoomIn', 'zoomOut', 'panLeft', 'panRight'];
+
+  let start = track.clipOrder.reduce((max, cid) => {
+    const c = p.clips[cid];
+    return c ? Math.max(max, c.startFrame + c.durationInFrames) : max;
+  }, 0);
+  let next = p;
+  images.forEach((media, i) => {
+    const clip: VideoClip = {
+      id: clipIds[i],
+      trackId: track.id,
+      mediaId: media.id,
+      startFrame: start,
+      durationInFrames: dur,
+      sourceInFrame: 0,
+      speed: 1,
+      fadeInFrames: 0,
+      fadeOutFrames: 0,
+      effectIds: [],
+      kind: 'image',
+      transform: containedBox(media.width ?? p.width, media.height ?? p.height, p.width, p.height),
+      transition: 'dissolve',
+      motion: opts.motion ? motions[i % motions.length] : 'none',
+      adjust: { brightness: 1, contrast: 1, saturate: 1 },
+    };
+    next = insertClip(next, clip);
+    start = Math.max(0, start + dur - overlap);
+  });
+  return next;
+}
+
 export function makeClipFromMedia(
   p: Project,
   args: { id: ClipId; mediaId: Project['media'][string]['id']; track: Track; startFrame: Frames },
