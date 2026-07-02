@@ -1,7 +1,8 @@
 # Roadmap & Resume Guide
 
 A single place to see what's built, what's next, and how to pick this project back up
-in a future session. (The `README.md` has the architecture; this file is the plan.)
+in a future session. (`README.md` = what the app is + how to use it; `SETUP.md` = how
+to run/test/develop it, architecture + file map; this file = the plan and history.)
 
 ## How to resume
 
@@ -14,8 +15,8 @@ npm run verify   # FULL gate: typecheck + unit + e2e + export + video + persist
 ```
 
 **Rule of thumb:** keep `npm run verify` green. Run it before and after any change.
-Architecture overview + file map: see `README.md`. Tests live in `scripts/` (Playwright)
-and `src/**/*.test.ts` (Vitest).
+Full setup/testing/architecture notes: **[SETUP.md](SETUP.md)**. Tests live in
+`scripts/` (Playwright) and `src/**/*.test.ts` (Vitest).
 
 ## Status: bug-hunt + UX pass + voiceover/karaoke-sync/readability complete ✅ — `npm run verify` green (95 unit + e2e + export + video + persist)
 
