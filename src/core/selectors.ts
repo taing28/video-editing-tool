@@ -197,6 +197,8 @@ export function voiceIntervals(p: Project): Array<[Frames, Frames]> {
   const ranges: Array<[number, number]> = [];
   for (const clip of Object.values(p.clips)) {
     if (clip.kind === 'audio' && !clip.duck) {
+      // A muted track is inaudible — it can't be the voice others duck under.
+      if (p.tracks[clip.trackId]?.muted) continue;
       ranges.push([clip.startFrame, clip.startFrame + clip.durationInFrames]);
     }
   }
@@ -210,11 +212,18 @@ export function voiceIntervals(p: Project): Array<[Frames, Frames]> {
   return merged;
 }
 
-/** Total timeline length: the furthest clip end across all tracks. */
+/**
+ * Total timeline length: the furthest end across clips AND timed overlays —
+ * a caption/text that outlasts the last clip still plays out (and exports)
+ * instead of being silently cut off.
+ */
 export function computeDuration(p: Project): Frames {
   let max = 0;
   for (const clip of Object.values(p.clips)) {
     max = Math.max(max, rangeEnd(clipRange(clip)));
+  }
+  for (const effect of Object.values(p.effects)) {
+    max = Math.max(max, rangeEnd(effect.timing));
   }
   return max;
 }

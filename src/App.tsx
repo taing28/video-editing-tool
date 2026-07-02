@@ -58,6 +58,10 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      // While exporting/transcribing, editing shortcuts must not fire — playback
+      // would fight the export's frame-accurate <video> seeking.
+      const busy = useEditor.getState();
+      if (busy.isExporting || busy.isTranscribing) return;
       const mod = e.metaKey || e.ctrlKey;
       if (e.code === 'Space') {
         e.preventDefault();

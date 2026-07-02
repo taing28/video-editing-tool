@@ -8,7 +8,7 @@
  */
 import type { Scene } from './scene';
 import { getFilteredCanvas } from './colorFilter';
-import { captionFont, layoutCaption } from './captionLayout';
+import { captionFont, layoutCaption, wrapCaptionLines } from './captionLayout';
 
 export function paintScene(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -95,11 +95,13 @@ export function paintScene(
           }
         });
       } else {
-        const y0 = scene.height - layer.lines.length * lineHeight - margin;
+        // Wrap over-wide lines the same way the preview does (shared helper).
+        const lines = wrapCaptionLines(layer.lines, layer.fontSize, layer.fontFamily, scene.width * 0.9);
+        const y0 = scene.height - lines.length * lineHeight - margin;
         const cx = scene.width / 2;
         ctx.textAlign = 'center';
         ctx.fillStyle = layer.color;
-        layer.lines.forEach((line, i) => {
+        lines.forEach((line, i) => {
           const y = y0 + i * lineHeight;
           ctx.strokeText(line, cx, y);
           ctx.fillText(line, cx, y);

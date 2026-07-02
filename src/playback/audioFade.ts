@@ -26,7 +26,13 @@ export function scheduleGainFade(
     const outStart = Math.max(inEnd, when + Math.max(0, durSec - fadeOutSec - elapsedSec));
     const outEnd = when + Math.max(0, durSec - elapsedSec);
     if (outEnd > outStart) {
-      param.setValueAtTime(baseGain, outStart);
+      // Starting INSIDE the fade-out (scrub-then-play): begin from the partial
+      // fade value so the preview matches the export's full-clip schedule.
+      const insideOut = elapsedSec > durSec - fadeOutSec;
+      const valAtOutStart = insideOut
+        ? baseGain * Math.min(1, (outEnd - outStart) / fadeOutSec)
+        : baseGain;
+      param.setValueAtTime(valAtOutStart, outStart);
       param.linearRampToValueAtTime(0, outEnd);
     }
   }

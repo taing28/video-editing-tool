@@ -25,6 +25,7 @@ import {
   reorderEffectRelative,
   reorderTrackRelative,
   setTrackPinned,
+  toggleTrackMuted,
 } from './edits';
 import {
   getTrackClips,
@@ -511,5 +512,106 @@ describe('buildSlideshow', () => {
   it('is a no-op with no images', () => {
     const p = createEmptyProject({ fps: 30 });
     expect(buildSlideshow(p, [], { durationInFrames: 120, motion: false, crossfadeFrames: 0 })).toBe(p);
+  });
+
+  it('caps the crossfade at half a slide (short slides keep their pace)', () => {
+    const p = twoImages();
+    const c1 = newClipId();
+    const c2 = newClipId();
+    // 15-frame slides with a REQUESTED 15-frame crossfade: uncapped this would
+    // advance each slide by a single frame and pile every image up.
+    const out = buildSlideshow(p, [c1, c2], {
+      durationInFrames: 15,
+      motion: false,
+      crossfadeFrames: 15,
+    });
+    expect(out.clips[c2].startFrame).toBe(8); // 15 − floor(15/2)
+  });
+});
+
+describe('speed-aware math (split/trim)', () => {
+  it('splitClip advances the right half into the source by speed', () => {
+    const { p, clipId } = setup();
+    const sped = setClipSpeed(p, clipId, 2); // duration 100 → 50 timeline frames
+    const rightId = newClipId();
+    const out = splitClip(sped, clipId, 125, rightId); // 25 frames in
+    // 25 timeline frames at 2× consume 50 source frames.
+    expect(out.clips[rightId].sourceInFrame).toBe(50);
+    expect(sourceFrameAt(out.clips[rightId], 125)).toBe(sourceFrameAt(out.clips[clipId], 125));
+  });
+
+  it('trimClipStart keeps frames INTEGER when clamped by fractional source headroom', () => {
+    const { p, clipId } = setup();
+    let next = setClipSpeed(p, clipId, 2);
+    next = {
+      ...next,
+      clips: { ...next.clips, [clipId]: { ...next.clips[clipId], sourceInFrame: 5 } },
+    };
+    // 5 source frames at 2× = 2.5 timeline frames of headroom — drag far left.
+    const out = trimClipStart(next, clipId, 0);
+    const c = out.clips[clipId];
+    expect(Number.isInteger(c.startFrame)).toBe(true);
+    expect(Number.isInteger(c.durationInFrames)).toBe(true);
+    expect(c.startFrame).toBe(98); // ceil(100 − 2.5)
+  });
+
+  it('trimClipEnd never produces a zero-length clip', () => {
+    const { p, clipId } = setup();
+    let next = setClipSpeed(p, clipId, 2);
+    next = {
+      ...next,
+      clips: { ...next.clips, [clipId]: { ...next.clips[clipId], sourceInFrame: 299 } },
+    };
+    // Source headroom (300−299)/2 = 0.5 floors to 0 — must clamp to 1, not 0.
+    const c = next.clips[clipId];
+    const out = trimClipEnd(next, clipId, c.startFrame + 50);
+    expect(out.clips[clipId].durationInFrames).toBe(1);
+  });
+});
+
+describe('computeDuration includes overlays', () => {
+  it('an overlay past the last clip extends the cached project duration', () => {
+    const { p } = setup(); // clip ends at frame 200
+    const eff: Effect = {
+      id: newEffectId(),
+      type: 'shape',
+      timing: { start: 250, duration: 50 },
+      x: 0,
+      y: 0,
+      width: 10,
+      height: 10,
+      color: '#fff',
+      opacity: 1,
+    };
+    const out = insertEffect(p, eff);
+    expect(out.durationInFrames).toBe(300);
+    // and removing it shrinks the duration back
+    expect(removeEffect(out, eff.id).durationInFrames).toBe(200);
+  });
+});
+
+describe('voiceIntervals ignores muted tracks', () => {
+  it('a muted voice track no longer ducks the music', () => {
+    let p = createEmptyProject({ fps: 30 });
+    const audioTrack = p.trackOrder[1];
+    const voice: AudioClip = {
+      id: newClipId(),
+      trackId: audioTrack,
+      mediaId: newMediaId(),
+      startFrame: 0,
+      durationInFrames: 30,
+      sourceInFrame: 0,
+      speed: 1,
+      fadeInFrames: 0,
+      fadeOutFrames: 0,
+      effectIds: [],
+      kind: 'audio',
+      gain: 1,
+      duck: false,
+    };
+    p = insertClip(p, voice);
+    expect(voiceIntervals(p)).toEqual([[0, 30]]);
+    p = toggleTrackMuted(p, audioTrack);
+    expect(voiceIntervals(p)).toEqual([]);
   });
 });

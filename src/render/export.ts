@@ -25,7 +25,7 @@ import {
   type VideoCodec,
   type AudioCodec,
 } from 'mediabunny';
-import type { Project } from '../core/model';
+import type { Project, VideoClip } from '../core/model';
 import {
   computeDuration,
   getActiveAudioClips,
@@ -92,15 +92,56 @@ function seekVideo(el: HTMLVideoElement, timeSec: number): Promise<void> {
   });
 }
 
-/** Seek every video clip visible at `frame` to its correct source position. */
-async function seekVideosForFrame(project: Project, frame: number): Promise<void> {
-  const seeks: Promise<void>[] = [];
+/**
+ * Seek every video clip visible at `frame` to its correct source position.
+ *
+ * When SEVERAL clips show the same media at once (e.g. a cross-dissolve between
+ * two cuts of one file), the single shared <video> element can't hold two times
+ * — the later seek would win and both layers would draw the same pixels. For
+ * those, seek sequentially and SNAPSHOT each clip's frame into a per-clip
+ * scratch canvas, returned as drawable overrides keyed by clip id.
+ */
+async function seekVideosForFrame(
+  project: Project,
+  frame: number,
+  scratch: Map<string, HTMLCanvasElement>,
+): Promise<Map<string, CanvasImageSource>> {
+  const overrides = new Map<string, CanvasImageSource>();
+  const groups = new Map<string, VideoClip[]>();
   for (const { clip } of getActiveVideoClips(project, frame)) {
     if (clip.kind !== 'video') continue;
-    const el = getVideoElement(clip.mediaId);
-    if (el) seeks.push(seekVideo(el, sourceFrameAt(clip, frame) / project.fps));
+    const arr = groups.get(clip.mediaId) ?? [];
+    arr.push(clip);
+    groups.set(clip.mediaId, arr);
   }
-  if (seeks.length) await Promise.all(seeks);
+
+  const jobs: Promise<void>[] = [];
+  for (const [mediaId, clips] of groups) {
+    const el = getVideoElement(mediaId as Parameters<typeof getVideoElement>[0]);
+    if (!el) continue;
+    if (clips.length === 1) {
+      jobs.push(seekVideo(el, sourceFrameAt(clips[0], frame) / project.fps));
+    } else {
+      jobs.push(
+        (async () => {
+          for (const clip of clips) {
+            await seekVideo(el, sourceFrameAt(clip, frame) / project.fps);
+            let canvas = scratch.get(clip.id);
+            if (!canvas) {
+              canvas = document.createElement('canvas');
+              scratch.set(clip.id, canvas);
+            }
+            canvas.width = el.videoWidth || 2;
+            canvas.height = el.videoHeight || 2;
+            canvas.getContext('2d')?.drawImage(el, 0, 0);
+            overrides.set(clip.id, canvas);
+          }
+        })(),
+      );
+    }
+  }
+  if (jobs.length) await Promise.all(jobs);
+  return overrides;
 }
 
 /** Collect every audio clip across all tracks (ignores per-track mute here). */
@@ -238,32 +279,52 @@ export async function exportProject(
     }
   };
 
-  // --- audio first (independent of the video frame loop) ---
-  if (audioSource) {
-    const mixed = await mixAudio(project, totalSeconds);
-    await checkAborted();
-    if (mixed) await audioSource.add(mixed);
-  }
-
-  // --- deterministic per-frame video render ---
-  // Fonts must be ready or text falls back to the wrong face in the output.
-  if (typeof document !== 'undefined' && document.fonts?.ready) {
-    await document.fonts.ready;
-  }
-  for (let frame = 0; frame < durationInFrames; frame++) {
-    await checkAborted();
-    await seekVideosForFrame(project, frame); // frame-accurate video
-    const scene = buildScene(project, frame, resolveMedia);
-    // Scene is in project pixels; scale the context to the export resolution.
-    ctx.setTransform(sx, 0, 0, sy, 0, 0);
-    paintScene(ctx, scene);
-    await videoSource.add(frame / fps, 1 / fps);
-    if (opts.onProgress && (frame % 3 === 0 || frame === durationInFrames - 1)) {
-      opts.onProgress((frame + 1) / durationInFrames);
+  try {
+    // --- audio first (independent of the video frame loop) ---
+    if (audioSource) {
+      const mixed = await mixAudio(project, totalSeconds);
+      await checkAborted();
+      if (mixed) await audioSource.add(mixed);
     }
-  }
 
-  await output.finalize();
+    // --- deterministic per-frame video render ---
+    // Fonts must be ready or text falls back to the wrong face in the output.
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+    // Scratch canvases for clips that share a <video> element with another
+    // visible clip (see seekVideosForFrame); reused across frames.
+    const videoScratch = new Map<string, HTMLCanvasElement>();
+    for (let frame = 0; frame < durationInFrames; frame++) {
+      await checkAborted();
+      const overrides = await seekVideosForFrame(project, frame, videoScratch);
+      const scene = buildScene(project, frame, resolveMedia);
+      if (overrides.size > 0) {
+        for (const layer of scene.layers) {
+          if (layer.kind === 'image') {
+            const snap = overrides.get(layer.clipId);
+            if (snap) layer.drawable = snap;
+          }
+        }
+      }
+      // Scene is in project pixels; scale the context to the export resolution.
+      ctx.setTransform(sx, 0, 0, sy, 0, 0);
+      paintScene(ctx, scene);
+      await videoSource.add(frame / fps, 1 / fps);
+      if (opts.onProgress && (frame % 3 === 0 || frame === durationInFrames - 1)) {
+        opts.onProgress((frame + 1) / durationInFrames);
+      }
+    }
+
+    await output.finalize();
+  } catch (err) {
+    // Abort already cancelled the output in checkAborted; every OTHER failure
+    // must cancel too, or the WebCodecs encoders and muxer buffers leak.
+    if (!(err instanceof DOMException && err.name === 'AbortError')) {
+      await output.cancel().catch(() => {});
+    }
+    throw err;
+  }
 
   const buffer = target.buffer;
   if (!buffer) throw new Error('Export produced no data.');

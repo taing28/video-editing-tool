@@ -36,7 +36,7 @@ import {
 } from '../render/scene';
 import { resolveMedia, getVideoElement } from '../media/registry';
 import { getFilteredCanvas } from '../render/colorFilter';
-import { layoutCaption } from '../render/captionLayout';
+import { layoutCaption, wrapCaptionLines } from '../render/captionLayout';
 import { getActiveVideoClips, sourceFrameAt } from '../core/selectors';
 import type { ClipId, EffectId } from '../core/ids';
 
@@ -123,6 +123,15 @@ export function Preview() {
             /* ignore */
           }
           void el.play().catch(() => {});
+        } else if (Math.abs(el.currentTime - target) > 0.25) {
+          // The element keeps playing linearly, but the timeline may have jumped
+          // to a DIFFERENT source position (a second clip of the same media, a
+          // discontinuous trim). Re-seek when the drift is clearly not clock jitter.
+          try {
+            el.currentTime = target;
+          } catch {
+            /* ignore */
+          }
         }
       } else {
         if (!el.paused) el.pause();
@@ -200,11 +209,19 @@ export function Preview() {
   const selImageOverlay = scene.layers.find(
     (l): l is ImageOverlayLayer => l.kind === 'imageOverlay' && l.effectId === selectedEffectId,
   );
-  // Base (un-faded) opacity of the selected shape, read from the document so the
-  // node stays at full editing weight even when scrubbed into its fade.
+  // Base (un-faded) opacity of the selected shape/image overlay, read from the
+  // document so the node stays at full editing weight even when scrubbed into
+  // its fade (mirrors how a selected clip ignores its transition).
   const selShapeEffect = selShape ? project.effects[selShape.effectId] : undefined;
   const selShapeBaseOpacity =
     selShapeEffect && selShapeEffect.type === 'shape' ? selShapeEffect.opacity : selShape?.opacity;
+  const selImageOverlayEffect = selImageOverlay
+    ? project.effects[selImageOverlay.effectId]
+    : undefined;
+  const selImageOverlayBaseOpacity =
+    selImageOverlayEffect && selImageOverlayEffect.type === 'image'
+      ? selImageOverlayEffect.opacity
+      : selImageOverlay?.opacity;
 
   // Attach the transformer to whichever node is selected.
   useEffect(() => {
@@ -299,6 +316,7 @@ export function Preview() {
                     fontStyle={weightToFontStyle(layer.fontWeight)}
                     fill={layer.color}
                     opacity={layer.opacity}
+                    lineHeight={1.2}
                   />
                 );
               }
@@ -340,15 +358,25 @@ export function Preview() {
                   </Group>
                 );
               }
+              // Wrap over-wide lines via the SAME helper the export uses, and
+              // disable Konva's own wrapping — otherwise the preview wraps but
+              // the exported file draws one long clipped line.
+              const wrapped = wrapCaptionLines(
+                layer.lines,
+                layer.fontSize,
+                layer.fontFamily,
+                scene.width * 0.9,
+              );
               return (
                 <KonvaText
                   key={layer.effectId}
-                  text={layer.lines.join('\n')}
+                  text={wrapped.join('\n')}
                   x={0}
                   width={scene.width}
                   align="center"
+                  wrap="none"
                   lineHeight={1.2}
-                  y={scene.height - layer.lines.length * layer.fontSize * 1.2 - layer.fontSize}
+                  y={scene.height - wrapped.length * layer.fontSize * 1.2 - layer.fontSize}
                   fontSize={layer.fontSize}
                   fontFamily={layer.fontFamily}
                   fontStyle="700"
@@ -411,6 +439,7 @@ export function Preview() {
                   fontFamily={selText.fontFamily}
                   fontStyle={weightToFontStyle(selText.fontWeight)}
                   fill={selText.color}
+                  lineHeight={1.2}
                   draggable
                   onDragEnd={(e) => {
                     const n = e.target;
@@ -474,7 +503,7 @@ export function Preview() {
                   y={selImageOverlay.y * scale}
                   width={selImageOverlay.width * scale}
                   height={selImageOverlay.height * scale}
-                  opacity={selImageOverlay.opacity}
+                  opacity={selImageOverlayBaseOpacity}
                   draggable
                   onDragEnd={(e) => {
                     const n = e.target;

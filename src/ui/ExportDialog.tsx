@@ -1,7 +1,7 @@
 /**
  * ui/ExportDialog — choose output resolution, quality, and format before export.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useEditor } from '../store/editorStore';
 import type { ExportFormat, ExportQuality } from '../render/export';
 
@@ -21,6 +21,16 @@ export function ExportDialog() {
   const [scale, setScale] = useState(1);
   const [quality, setQuality] = useState<ExportQuality>('high');
   const [format, setFormat] = useState<ExportFormat>('auto');
+
+  // Escape closes, like the Help dialog.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, close]);
 
   if (!open) return null;
   const outW = Math.round(width * scale);

@@ -10,6 +10,7 @@ import { newMediaId } from '../core/ids';
 import type { MediaId } from '../core/ids';
 import { secondsToFrames } from '../core/time';
 import type { ResolvedMedia } from '../render/scene';
+import { invalidateFilmstrip } from './thumbnails';
 
 interface RegistryEntry extends ResolvedMedia {
   kind: MediaKind;
@@ -20,6 +21,8 @@ interface RegistryEntry extends ResolvedMedia {
   file?: File;
   /** Cached decoded audio (per export sample rate). */
   audioBuffer?: AudioBuffer;
+  /** In-flight decode, so N concurrent waveforms share ONE decode. */
+  audioBufferPromise?: Promise<AudioBuffer | undefined>;
 }
 
 const entries = new Map<string, RegistryEntry>();
@@ -143,10 +146,19 @@ export async function getAudioBuffer(
   const entry = entries.get(id);
   if (!entry?.file) return undefined;
   if (entry.audioBuffer) return entry.audioBuffer;
-  const arrayBuffer = await entry.file.arrayBuffer();
-  const decoded = await audioContext.decodeAudioData(arrayBuffer);
-  entry.audioBuffer = decoded;
-  return decoded;
+  if (entry.audioBufferPromise) return entry.audioBufferPromise;
+  const job = (async () => {
+    try {
+      const arrayBuffer = await entry.file!.arrayBuffer();
+      const decoded = await audioContext.decodeAudioData(arrayBuffer);
+      entry.audioBuffer = decoded;
+      return decoded;
+    } finally {
+      entry.audioBufferPromise = undefined;
+    }
+  })();
+  entry.audioBufferPromise = job;
+  return job;
 }
 
 /**
@@ -154,6 +166,10 @@ export async function getAudioBuffer(
  * (used on reload). Returns a fresh object URL to patch into the asset's `src`.
  */
 export async function reimportFile(asset: MediaAsset, file: File): Promise<string> {
+  // Replacing an existing entry (e.g. re-opening a project bundle in-session)
+  // must release the old object URL or every open leaks the previous blob.
+  const existing = entries.get(asset.id);
+  if (existing?.objectUrl) URL.revokeObjectURL(existing.objectUrl);
   const url = URL.createObjectURL(file);
   if (asset.kind === 'image') {
     const img = await loadImage(url);
@@ -189,6 +205,8 @@ export function disposeMedia(id: MediaId): void {
   const entry = entries.get(id);
   if (entry?.objectUrl) URL.revokeObjectURL(entry.objectUrl);
   entries.delete(id);
+  // Filmstrip thumbnails hold the (now revoked) object URL — drop them too.
+  invalidateFilmstrip(id);
 }
 
 /**

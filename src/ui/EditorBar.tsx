@@ -20,6 +20,8 @@ export function EditorBar() {
   const duplicate = useEditor((s) => s.duplicateSelected);
   const remove = useEditor((s) => s.removeSelected);
   const hasSelection = useEditor((s) => Boolean(s.selectedClipId || s.selectedEffectId));
+  // Split only works on clips — with an overlay selected it would silently no-op.
+  const hasClipSelection = useEditor((s) => Boolean(s.selectedClipId));
 
   const addTrack = useEditor((s) => s.addTrack);
   const snappingEnabled = useEditor((s) => s.snappingEnabled);
@@ -65,7 +67,7 @@ export function EditorBar() {
         <button
           className="iconbtn"
           onClick={split}
-          disabled={!hasSelection}
+          disabled={!hasClipSelection}
           data-tip="Cut the selected clip in two at the playhead (S)."
         >
           ✂ Split

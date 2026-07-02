@@ -146,8 +146,9 @@ export function trimClipStart(p: Project, clipId: ClipId, newStartFrame: Frames)
   if (!clip) return p;
   const rightEdge = clip.startFrame + clip.durationInFrames;
   // Each timeline frame consumes `speed` source frames, so the trim point can
-  // only be pulled back by sourceInFrame/speed timeline frames.
-  const minStart = Math.max(0, clip.startFrame - clip.sourceInFrame / clip.speed);
+  // only be pulled back by sourceInFrame/speed timeline frames. Ceil keeps the
+  // clamped start an INTEGER frame (the document never stores fractions).
+  const minStart = Math.max(0, Math.ceil(clip.startFrame - clip.sourceInFrame / clip.speed));
   const maxStart = rightEdge - 1; // keep at least 1 frame
   const start = clampFrame(Math.round(newStartFrame), minStart, maxStart);
   const delta = start - clip.startFrame;
@@ -174,7 +175,7 @@ export function trimClipEnd(p: Project, clipId: ClipId, newEndFrame: Frames): Pr
   const maxDuration =
     limit === Number.POSITIVE_INFINITY
       ? Number.POSITIVE_INFINITY
-      : Math.floor((limit - clip.sourceInFrame) / clip.speed);
+      : Math.max(1, Math.floor((limit - clip.sourceInFrame) / clip.speed));
   let duration = Math.round(newEndFrame) - clip.startFrame;
   duration = Math.max(1, duration);
   if (duration > maxDuration) duration = maxDuration;
@@ -234,7 +235,9 @@ export function splitClip(
     id: rightClipId,
     startFrame: cut,
     durationInFrames: end - cut,
-    sourceInFrame: clip.sourceInFrame + leftDuration,
+    // Each timeline frame consumes `speed` source frames, so the right half
+    // starts that much further into the source.
+    sourceInFrame: Math.round(clip.sourceInFrame + leftDuration * clip.speed),
     effectIds: [], // clip-scoped effects stay with the left half
   };
   let next = putClip(p, left);
@@ -334,11 +337,11 @@ export function setClipFade(
 // --- effects ----------------------------------------------------------------
 
 export function insertEffect(p: Project, effect: Effect): Project {
-  return {
+  return recompute({
     ...p,
     effects: { ...p.effects, [effect.id]: effect },
     effectOrder: [...p.effectOrder, effect.id],
-  };
+  });
 }
 
 export function updateEffect(p: Project, effectId: EffectId, patch: Partial<Effect>): Project {
@@ -346,14 +349,14 @@ export function updateEffect(p: Project, effectId: EffectId, patch: Partial<Effe
   if (!effect) return p;
   // Patch is constrained by the union; spread is safe because we keep `type`.
   const merged = { ...effect, ...patch, id: effect.id, type: effect.type } as Effect;
-  return { ...p, effects: { ...p.effects, [effectId]: merged } };
+  return recompute({ ...p, effects: { ...p.effects, [effectId]: merged } });
 }
 
 export function removeEffect(p: Project, effectId: EffectId): Project {
   if (!p.effects[effectId]) return p;
   const effects = { ...p.effects };
   delete effects[effectId];
-  return { ...p, effects, effectOrder: p.effectOrder.filter((id) => id !== effectId) };
+  return recompute({ ...p, effects, effectOrder: p.effectOrder.filter((id) => id !== effectId) });
 }
 
 // --- overlay timing (timeline lanes) ---------------------------------------
@@ -367,7 +370,7 @@ function putEffectTiming(
   timing: { start: Frames; duration: Frames },
 ): Project {
   const eff = p.effects[effectId];
-  return { ...p, effects: { ...p.effects, [effectId]: { ...eff, timing } } };
+  return recompute({ ...p, effects: { ...p.effects, [effectId]: { ...eff, timing } } });
 }
 
 /** Move a timed overlay to a new start frame (clamped >= 0); duration unchanged. */
@@ -421,7 +424,9 @@ export function buildSlideshow(
   const images = Object.values(p.media).filter((m) => m.kind === 'image');
   if (!track || images.length === 0 || clipIds.length < images.length) return p;
   const dur = Math.max(1, Math.round(opts.durationInFrames));
-  const overlap = Math.max(0, Math.min(dur - 1, Math.round(opts.crossfadeFrames)));
+  // Cap the crossfade at half a slide so at most two images ever overlap (the
+  // dissolve renderer models a 2-clip overlap) and short slides keep their pace.
+  const overlap = Math.max(0, Math.min(Math.floor(dur / 2), Math.round(opts.crossfadeFrames)));
   const motions: KenBurns[] = ['zoomIn', 'zoomOut', 'panLeft', 'panRight'];
 
   let start = track.clipOrder.reduce((max, cid) => {
@@ -542,7 +547,7 @@ export function duplicateEffect(p: Project, effectId: EffectId, newId: EffectId)
     i < 0
       ? [...p.effectOrder, newId]
       : [...p.effectOrder.slice(0, i + 1), newId, ...p.effectOrder.slice(i + 1)];
-  return { ...p, effects: { ...p.effects, [newId]: copy }, effectOrder };
+  return recompute({ ...p, effects: { ...p.effects, [newId]: copy }, effectOrder });
 }
 
 // --- reorder + pin (timeline rows) -----------------------------------------
@@ -559,7 +564,10 @@ function reposition(
   const ti = without.indexOf(targetId);
   if (ti < 0) return order;
   const at = place === 'before' ? ti : ti + 1;
-  return [...without.slice(0, at), id, ...without.slice(at)];
+  const next = [...without.slice(0, at), id, ...without.slice(at)];
+  // No-op reorders return the ORIGINAL array so callers can cheaply detect
+  // "nothing changed" (and the store records no history entry).
+  return next.every((x, i) => x === order[i]) ? order : next;
 }
 
 export function reorderEffectRelative(

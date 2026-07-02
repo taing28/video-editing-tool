@@ -113,6 +113,9 @@ export interface EditorState {
   toggleTrackHidden: (trackId: TrackId) => void;
   /** Move a row before/after a sibling of the same group (overlay/track). */
   reorderRow: (row: TimelineRow, targetId: string, displayPlace: 'above' | 'below') => void;
+  /** Same, but TRANSIENT (no history entry) — for the grip drag, which snapshots
+   * once via beginInteraction so a whole gesture is one undo step. */
+  applyRowReorder: (row: TimelineRow, targetId: string, displayPlace: 'above' | 'below') => void;
   /** Pin/unpin a row so it sticks to the top of the timeline. */
   toggleRowPinned: (row: TimelineRow) => void;
   setCanvasSize: (width: number, height: number) => void;
@@ -224,6 +227,39 @@ export const useEditor = create<EditorState>((set, get) => {
     }
   };
 
+  /**
+   * (Re)start the playback clock + audio from `frame`. Used by play() and by
+   * setPlayhead() while playing (scrubbing re-anchors instead of being
+   * overwritten by the next tick). Anchored to wall time so the frame is
+   * derived, never counted.
+   */
+  const startClockAt = (frame: Frames) => {
+    stopClock();
+    audioEngine.stop();
+    const state = get();
+    const duration = computeDuration(state.project);
+    const fps = state.project.fps;
+    const anchorTime = performance.now();
+    const anchorFrame = frame;
+    set({ isPlaying: true, playhead: anchorFrame });
+
+    const tick = () => {
+      const elapsed = (performance.now() - anchorTime) / 1000;
+      const f = anchorFrame + secondsToFrames(elapsed, fps);
+      if (f >= duration - 1) {
+        set({ playhead: Math.max(0, duration - 1), isPlaying: false });
+        audioEngine.stop();
+        stopClock();
+        return;
+      }
+      set({ playhead: f });
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    // Schedule audio (async decode + play); fire-and-forget.
+    void audioEngine.start(state.project, anchorFrame, fps);
+  };
+
   return {
     project: createEmptyProject(),
     selectedClipId: null,
@@ -280,6 +316,26 @@ export const useEditor = create<EditorState>((set, get) => {
       }
     },
 
+    applyRowReorder: (row, targetId, displayPlace) => {
+      if (row.id === targetId) return;
+      const p = get().project;
+      const next =
+        row.type === 'overlay'
+          ? reorderEffectRelativeEdit(
+              p,
+              row.id as never,
+              targetId as never,
+              displayPlace === 'above' ? 'after' : 'before',
+            )
+          : reorderTrackRelativeEdit(
+              p,
+              row.id as never,
+              targetId as never,
+              displayPlace === 'above' ? 'before' : 'after',
+            );
+      if (next !== p) set({ project: next });
+    },
+
     toggleRowPinned: (row) => {
       if (row.type === 'overlay') {
         commit((p) => setEffectPinnedEdit(p, row.id as never, !row.pinned));
@@ -312,7 +368,11 @@ export const useEditor = create<EditorState>((set, get) => {
         try {
           const asset = await importFile(file, fps);
           commit((p) => addMedia(p, asset));
-          void persistence.saveMedia(asset.id, file); // persist bytes for reload
+          // Persist bytes for reload; a failure (quota, private mode) must not
+          // be silent — the project would come back without this media.
+          persistence.saveMedia(asset.id, file).catch((err) => {
+            console.warn('Could not persist media bytes (reload will lose them):', err);
+          });
         } catch (err) {
           console.error(err);
         }
@@ -326,15 +386,33 @@ export const useEditor = create<EditorState>((set, get) => {
       // Keep the runtime/IDB blob so undo can bring the clips back this session.
       commit((p) => removeMediaEdit(p, mediaId));
       if (selectionRemoved) set({ selectedClipId: null });
+      // The delete also removes image overlays that referenced this media —
+      // don't leave the selection pointing at a gone effect.
+      const after = get();
+      if (after.selectedEffectId && !after.project.effects[after.selectedEffectId]) {
+        set({ selectedEffectId: null });
+      }
     },
 
     buildSlideshow: (opts) => {
-      const imageCount = Object.values(get().project.media).filter(
-        (m) => m.kind === 'image',
-      ).length;
+      const { project } = get();
+      const imageCount = Object.values(project.media).filter((m) => m.kind === 'image').length;
       if (imageCount === 0) return;
       const ids = Array.from({ length: imageCount }, () => newClipId());
-      commit((p) => buildSlideshowEdit(p, ids, opts));
+      // If every video track was deleted, add one back instead of silently
+      // doing nothing.
+      const needsTrack = !Object.values(project.tracks).some((t) => t.kind === 'video');
+      const track: Track = {
+        id: newTrackId(),
+        kind: 'video',
+        name: 'Video',
+        clipOrder: [],
+        muted: false,
+        hidden: false,
+      };
+      commit((p) =>
+        buildSlideshowEdit(needsTrack ? insertTrackEdit(p, track, 'top') : p, ids, opts),
+      );
     },
 
     addClipFromMedia: (mediaId, trackId) => {
@@ -369,11 +447,13 @@ export const useEditor = create<EditorState>((set, get) => {
       if (selectedClipId) {
         const newId = newClipId();
         commit((p) => duplicateClipEdit(p, selectedClipId, newId));
-        set({ selectedClipId: newId, selectedEffectId: null });
+        // Only move the selection if the duplicate was actually created (the
+        // selected id can be stale, e.g. right after its media was deleted).
+        if (get().project.clips[newId]) set({ selectedClipId: newId, selectedEffectId: null });
       } else if (selectedEffectId) {
         const newId = newEffectId();
         commit((p) => duplicateEffectEdit(p, selectedEffectId, newId));
-        set({ selectedEffectId: newId, selectedClipId: null });
+        if (get().project.effects[newId]) set({ selectedEffectId: newId, selectedClipId: null });
       }
     },
 
@@ -422,6 +502,7 @@ export const useEditor = create<EditorState>((set, get) => {
     setBackground: (color) => commit((p) => setBackgroundEdit(p, color)),
 
     beginInteraction: () => {
+      renameActive = false; // a drag gesture ends any rename-coalescing burst
       const { project, past } = get();
       set({ past: [...past, project].slice(-HISTORY_LIMIT), future: [] });
       return project;
@@ -615,7 +696,11 @@ export const useEditor = create<EditorState>((set, get) => {
           alert('No speech detected in the audio.');
           return;
         }
-        commit((p) => captions.reduce((acc, c) => insertEffect(acc, c), p));
+        // Transcription can take a while — if a DIFFERENT project was opened
+        // meanwhile, don't paste the old project's captions into it.
+        commit((p) =>
+          p.id === project.id ? captions.reduce((acc, c) => insertEffect(acc, c), p) : p,
+        );
       } catch (err) {
         console.error('Auto-caption failed:', err);
         set({ isTranscribing: false, transcribeStatus: null });
@@ -624,37 +709,26 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     setPlayhead: (frame) => {
-      const { project } = get();
+      const { project, isPlaying } = get();
       const max = Math.max(0, computeDuration(project) - 1);
-      set({ playhead: clampFrame(Math.round(frame), 0, Math.max(0, max)) });
+      const target = clampFrame(Math.round(frame), 0, Math.max(0, max));
+      // While playing, re-anchor the clock (and audio) at the scrub target —
+      // otherwise the next tick derives the frame from the OLD anchor and the
+      // scrub silently doesn't stick.
+      if (isPlaying) startClockAt(target);
+      else set({ playhead: target });
     },
 
     play: () => {
       const state = get();
       if (state.isPlaying) return;
+      // Playing during an export would fight the export's <video> seeking and
+      // corrupt the rendered frames.
+      if (state.isExporting || state.isTranscribing) return;
       const duration = computeDuration(state.project);
       if (duration <= 0) return;
-      const fps = state.project.fps;
-      // Anchor the clock to wall time so the frame is derived, never counted.
-      const anchorTime = performance.now();
       const anchorFrame = state.playhead >= duration - 1 ? 0 : state.playhead;
-      set({ isPlaying: true, playhead: anchorFrame });
-
-      const tick = () => {
-        const elapsed = (performance.now() - anchorTime) / 1000;
-        const frame = anchorFrame + secondsToFrames(elapsed, fps);
-        if (frame >= duration - 1) {
-          set({ playhead: Math.max(0, duration - 1), isPlaying: false });
-          audioEngine.stop();
-          stopClock();
-          return;
-        }
-        set({ playhead: frame });
-        rafId = requestAnimationFrame(tick);
-      };
-      rafId = requestAnimationFrame(tick);
-      // Schedule audio (async decode + play); fire-and-forget.
-      void audioEngine.start(state.project, anchorFrame, fps);
+      startClockAt(anchorFrame);
     },
 
     pause: () => {
@@ -746,6 +820,7 @@ export const useEditor = create<EditorState>((set, get) => {
     newProject: () => {
       stopClock();
       audioEngine.stop();
+      renameActive = false;
       disposeUnusedMedia(new Set()); // a fresh project has no media
       set({
         project: createEmptyProject(),
@@ -761,6 +836,7 @@ export const useEditor = create<EditorState>((set, get) => {
     loadProject: (project) => {
       stopClock();
       audioEngine.stop();
+      renameActive = false;
       // Free the outgoing project's runtime media (URLs + blobs); history is
       // reset on load, so the old media can't be brought back by undo.
       disposeUnusedMedia(new Set(Object.keys(project.media)));

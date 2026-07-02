@@ -28,6 +28,41 @@ export function setTranscriberOverride(fn: TranscribeFn | null): void {
   override = fn;
 }
 
+// The ASR pipeline holds the full fp32 model in memory — build it ONCE and
+// reuse it across transcriptions (rebuilding per call leaked a model each run).
+let asrPromise: Promise<unknown> | null = null;
+// Status sink for the CURRENT run (the download progress callback is bound
+// once, at pipeline build time).
+let statusSink: (status: string) => void = () => {};
+
+function getAsr(): Promise<unknown> {
+  if (asrPromise) return asrPromise;
+  asrPromise = (async () => {
+    const tf = await import('@huggingface/transformers');
+    // Force single-threaded WASM so it runs without cross-origin isolation
+    // (SharedArrayBuffer/COOP-COEP). Slower, but works on any host.
+    try {
+      (tf.env.backends.onnx.wasm as { numThreads?: number }).numThreads = 1;
+    } catch {
+      /* env shape may change across versions — non-fatal */
+    }
+    return tf.pipeline('automatic-speech-recognition', MODEL, {
+      // fp32 avoids broken 4-bit (MatMulNBits) quantized weights in some ORT builds.
+      dtype: 'fp32',
+      progress_callback: (p: { status?: string; progress?: number }) => {
+        if (p.status === 'progress' && typeof p.progress === 'number') {
+          statusSink(`Downloading model ${Math.round(p.progress)}%`);
+        }
+      },
+    });
+  })();
+  // A failed build must not poison every future attempt.
+  asrPromise.catch(() => {
+    asrPromise = null;
+  });
+  return asrPromise;
+}
+
 export async function transcribe(
   pcm: Float32Array,
   sampleRate: number,
@@ -40,23 +75,8 @@ export async function transcribe(
   }
 
   onStatus('Loading speech model…');
-  const tf = await import('@huggingface/transformers');
-  // Force single-threaded WASM so it runs without cross-origin isolation
-  // (SharedArrayBuffer/COOP-COEP). Slower, but works on any host.
-  try {
-    (tf.env.backends.onnx.wasm as { numThreads?: number }).numThreads = 1;
-  } catch {
-    /* env shape may change across versions — non-fatal */
-  }
-  const asr = await tf.pipeline('automatic-speech-recognition', MODEL, {
-    // fp32 avoids broken 4-bit (MatMulNBits) quantized weights in some ORT builds.
-    dtype: 'fp32',
-    progress_callback: (p: { status?: string; progress?: number }) => {
-      if (p.status === 'progress' && typeof p.progress === 'number') {
-        onStatus(`Downloading model ${Math.round(p.progress)}%`);
-      }
-    },
-  });
+  statusSink = onStatus;
+  const asr = await getAsr();
 
   onStatus('Transcribing…');
   const result = (await (asr as unknown as CallableFunction)(pcm, {

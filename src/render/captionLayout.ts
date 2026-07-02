@@ -37,6 +37,44 @@ function getMeasureCtx(): CanvasRenderingContext2D | null {
   return measureCtx;
 }
 
+/**
+ * Greedy word-wrap plain caption lines to `maxWidth`, preserving explicit \n
+ * breaks. Both renderers wrap through THIS function so a long caption breaks
+ * at the same words in the preview and the export (same parity trick as
+ * `layoutCaption` for karaoke words).
+ */
+export function wrapCaptionLines(
+  lines: string[],
+  fontSize: number,
+  fontFamily: string,
+  maxWidth: number,
+): string[] {
+  const ctx = getMeasureCtx();
+  if (ctx) ctx.font = captionFont(fontSize, fontFamily);
+  const measure = (t: string) => (ctx ? ctx.measureText(t).width : t.length * fontSize * 0.55);
+
+  const out: string[] = [];
+  for (const line of lines) {
+    const words = line.split(/\s+/).filter(Boolean);
+    if (words.length === 0) {
+      out.push('');
+      continue;
+    }
+    let cur = words[0];
+    for (const word of words.slice(1)) {
+      const candidate = `${cur} ${word}`;
+      if (measure(candidate) > maxWidth) {
+        out.push(cur);
+        cur = word;
+      } else {
+        cur = candidate;
+      }
+    }
+    out.push(cur);
+  }
+  return out;
+}
+
 /** Greedy word-wrap `words` to `maxWidth`, returning per-line positioned words. */
 export function layoutCaption(
   words: string[],

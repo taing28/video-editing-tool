@@ -257,7 +257,8 @@ export function buildScene(
  * has no dedicated weight prop, so weight is expressed through fontStyle.
  */
 export function weightToFontStyle(weight: number): string {
-  // Konva accepts 'normal' | 'bold' | numeric strings like '700'.
-  if (weight >= 600) return String(weight);
-  return 'normal';
+  // Konva accepts 'normal' | 'bold' | numeric strings like '700'. Pass the
+  // weight through verbatim so light/medium (300/500) match the export, which
+  // builds its ctx.font from the same number.
+  return String(weight);
 }

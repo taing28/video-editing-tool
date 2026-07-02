@@ -68,12 +68,16 @@ export async function mixProjectAudioMono16k(project: Project): Promise<Float32A
     if (!buffer) continue;
     const node = ctx.createBufferSource();
     node.buffer = buffer; // resampled to 16 kHz on playback
+    // Honor the clip's playback speed — otherwise a sped-up/slowed clip is
+    // transcribed at the wrong rate and every caption lands at the wrong time.
+    node.playbackRate.value = clip.speed;
     node.connect(ctx.destination);
     const when = clip.startFrame / project.fps;
     const offset = clip.sourceInFrame / project.fps;
-    const duration = clip.durationInFrames / project.fps;
+    const timelineDur = clip.durationInFrames / project.fps;
     const available = Math.max(0, buffer.duration - offset);
-    node.start(when, offset, Math.min(duration, available));
+    // At playbackRate `speed`, filling timelineDur needs speed× source seconds.
+    node.start(when, offset, Math.min(timelineDur * clip.speed, available));
     scheduled++;
   }
   if (scheduled === 0) return null;

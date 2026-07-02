@@ -13,6 +13,16 @@ const cache = new Map<string, string[]>();
 const inflight = new Map<string, Promise<string[]>>();
 const attempts = new Map<string, number>();
 
+/**
+ * Drop the cached filmstrip for a media id — called when its runtime entry is
+ * disposed (the cached frames reference a revoked object URL) so a later
+ * re-import extracts fresh frames instead of rendering blanks.
+ */
+export function invalidateFilmstrip(mediaId: string): void {
+  cache.delete(mediaId);
+  attempts.delete(mediaId);
+}
+
 function seekTo(video: HTMLVideoElement, t: number): Promise<void> {
   return new Promise((resolve) => {
     const onSeeked = () => {

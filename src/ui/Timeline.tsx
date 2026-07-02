@@ -32,7 +32,7 @@ const LABEL_WIDTH = 92;
  * the drop target. One gesture = one undo step.
  */
 function useRowReorder(row: TimelineRow) {
-  const reorderRow = useEditor((s) => s.reorderRow);
+  const applyRowReorder = useEditor((s) => s.applyRowReorder);
   const beginInteraction = useEditor((s) => s.beginInteraction);
   const dragging = useRef(false);
   const started = useRef(false);
@@ -61,7 +61,10 @@ function useRowReorder(row: TimelineRow) {
     }
     const r = el!.getBoundingClientRect();
     const place = e.clientY < r.top + r.height / 2 ? 'above' : 'below';
-    reorderRow(row, targetId, place);
+    // TRANSIENT apply — beginInteraction() above took the one history snapshot
+    // for this gesture, so pointer-moves must not commit (a drag across N rows
+    // would otherwise flood the undo stack with an entry per crossing).
+    applyRowReorder(row, targetId, place);
   };
 
   const onGripUp = (e: React.PointerEvent) => {

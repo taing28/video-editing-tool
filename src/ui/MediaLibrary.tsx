@@ -111,7 +111,12 @@ export function MediaLibrary() {
           accept="image/*,audio/*,video/*"
           multiple
           hidden
-          onChange={(e) => onPick(e.target.files)}
+          onChange={(e) => {
+            onPick(e.target.files);
+            // Reset so picking the SAME file again (e.g. after deleting it)
+            // still fires a change event.
+            e.target.value = '';
+          }}
         />
       </div>
 
