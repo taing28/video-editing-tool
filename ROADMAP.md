@@ -19,6 +19,20 @@ and `src/**/*.test.ts` (Vitest).
 
 ## Status: bug-hunt + UX pass + voiceover/karaoke-sync/readability complete ✅ — `npm run verify` green (95 unit + e2e + export + video + persist)
 
+### 2026-07-02 (later) — row reorder rebuilt, power keybinds, docs refresh
+- **Row reorder fixed + animated** — the old drag died after ONE position because React can
+  remount a lane when the list reorders, which silently releases pointer capture (and kills
+  component-scoped listeners). The gesture now lives at MODULE level (window listeners + the
+  held row id in the store), so one drag carries a row across any number of positions. The whole
+  gutter is the grab surface (pin/delete are hover-revealed), the held row lifts (accent outline +
+  shadow), rows of other groups dim via CSS `:has`, and displaced rows slide with a FLIP
+  animation (Web Animations API keyed on `offsetTop`). Still one undo step per gesture —
+  e2e proves lift → 2-position hop → single-step undo.
+- **Keybinds** — `1–7` switch dock panels, `T`/`C` add text/caption, `/` or `⌘K` open the
+  searchable guide. Chosen to never fight the browser: reserved combos (⌘T/⌘W/⌘L) are avoided,
+  interceptable defaults (⌘S/⌘K//) are `preventDefault`ed. All ignored while typing in fields.
+- README rewritten (current feature list, shortcut table, real module map).
+
 ### 2026-07-02 — adversarial bug hunt (25 fixes), UX pass (18 improvements), 3 features
 - **Bug fixes** (multi-agent adversarial review, all verified by direct code trace): speed-aware
   split/trim math, row-reorder undo flood, scrub-while-playing, shortcuts-during-export, caption

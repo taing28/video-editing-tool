@@ -26,53 +26,61 @@ import { ScrollArea } from './ScrollArea';
 const LABEL_WIDTH = 92;
 
 /**
- * Hand-rolled vertical reorder drag, mirroring the clip/overlay drag pattern.
- * The grip's onPointerDown starts it; while dragging, the `.lane` under the
+ * Hand-rolled vertical reorder drag. The WHOLE lane label is the grab surface
+ * (the ⋮⋮ grip is just the affordance); while dragging, the `.lane` under the
  * pointer (matched by data-row-id / data-row-group in the same group) becomes
- * the drop target. One gesture = one undo step.
+ * the live drop slot — one gesture can carry a row across any number of
+ * positions. The held row is styled `is-lifted`, rows of other groups dim
+ * (CSS :has), and displaced rows slide via the FLIP effect in <Timeline>.
+ * One gesture = one undo step.
  */
-function useRowReorder(row: TimelineRow) {
-  const applyRowReorder = useEditor((s) => s.applyRowReorder);
-  const beginInteraction = useEditor((s) => s.beginInteraction);
-  const dragging = useRef(false);
-  const started = useRef(false);
-
-  const onGripDown = (e: React.PointerEvent) => {
-    if (e.button !== 0) return;
-    e.stopPropagation();
-    (e.target as Element).setPointerCapture(e.pointerId);
-    dragging.current = true;
-    started.current = false;
-  };
-
-  const onGripMove = (e: React.PointerEvent) => {
-    if (!dragging.current) return;
+/**
+ * MODULE-level drag so the gesture survives ANYTHING React does to the lane
+ * component: reordering can remount the row mid-drag (which both releases
+ * pointer capture and re-runs effect cleanups), so neither capture nor
+ * component-scoped listeners are safe. Window listeners + store state are.
+ */
+function startRowDrag(row: TimelineRow, e: React.PointerEvent): void {
+  if (e.button !== 0) return;
+  // The pin/mute/hide/delete buttons keep their own click behavior.
+  if ((e.target as HTMLElement).closest('button')) return;
+  e.preventDefault();
+  let started = false;
+  const move = (ev: PointerEvent) => {
     const el = document
-      .elementsFromPoint(e.clientX, e.clientY)
+      .elementsFromPoint(ev.clientX, ev.clientY)
       .find((n) => (n as HTMLElement).classList?.contains('lane')) as HTMLElement | undefined;
     const targetId = el?.dataset.rowId;
     const targetGroup = el?.dataset.rowGroup;
     if (!targetId || targetId === row.id) return;
     const myGroup = row.type === 'overlay' ? 'overlay' : row.kind;
     if (targetGroup !== myGroup) return; // same group only
-    if (!started.current) {
-      started.current = true;
-      beginInteraction();
+    if (!started) {
+      started = true;
+      useEditor.getState().beginInteraction();
     }
     const r = el!.getBoundingClientRect();
-    const place = e.clientY < r.top + r.height / 2 ? 'above' : 'below';
+    const place = ev.clientY < r.top + r.height / 2 ? 'above' : 'below';
     // TRANSIENT apply — beginInteraction() above took the one history snapshot
     // for this gesture, so pointer-moves must not commit (a drag across N rows
     // would otherwise flood the undo stack with an entry per crossing).
-    applyRowReorder(row, targetId, place);
+    useEditor.getState().applyRowReorder(row, targetId, place);
   };
-
-  const onGripUp = (e: React.PointerEvent) => {
-    if (dragging.current) (e.target as Element).releasePointerCapture?.(e.pointerId);
-    dragging.current = false;
+  const end = () => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', end);
+    window.removeEventListener('pointercancel', end);
+    useEditor.setState({ liftedRowId: null });
   };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', end);
+  window.addEventListener('pointercancel', end);
+  useEditor.setState({ liftedRowId: row.id });
+}
 
-  return { onGripDown, onGripMove, onGripUp };
+function useRowReorder(row: TimelineRow) {
+  const lifted = useEditor((s) => s.liftedRowId === row.id);
+  return { lifted, labelProps: { onPointerDown: (e: React.PointerEvent) => startRowDrag(row, e) } };
 }
 
 interface DragState {
@@ -303,20 +311,12 @@ function OverlayLane({ effect, pxPerFrame }: { effect: Effect; pxPerFrame: numbe
 
   return (
     <div
-      className={`lane lane--overlay${selected ? ' is-active' : ''}`}
+      className={`lane lane--overlay${selected ? ' is-active' : ''}${grip.lifted ? ' is-lifted' : ''}`}
       data-row-id={effect.id}
       data-row-group="overlay"
     >
-      <div className="lane__label">
-        <span
-          className="lane__grip"
-          title="Drag to reorder"
-          onPointerDown={grip.onGripDown}
-          onPointerMove={grip.onGripMove}
-          onPointerUp={grip.onGripUp}
-        >
-          ⋮⋮
-        </span>
+      <div className="lane__label" title="Drag to reorder" {...grip.labelProps}>
+        <span className="lane__grip">⋮⋮</span>
         <span className="lane__name" title={overlayLabel(effect, media?.name)}>
           <span className={`lane__ico lane__ico--${effect.type}`}>{overlayIcon(effect)}</span>
           {overlayLabel(effect, media?.name)}
@@ -374,21 +374,13 @@ function TrackLane({ trackId, pxPerFrame }: { trackId: string; pxPerFrame: numbe
 
   return (
     <div
-      className={`lane lane--${track.kind}${track.hidden ? ' is-hidden' : ''}`}
+      className={`lane lane--${track.kind}${track.hidden ? ' is-hidden' : ''}${grip.lifted ? ' is-lifted' : ''}`}
       data-row-id={track.id}
       data-row-group={track.kind}
     >
-      <div className="lane__label">
+      <div className="lane__label" title="Drag to reorder" {...grip.labelProps}>
         <div className="lane__head">
-          <span
-            className="lane__grip"
-            title="Drag to reorder"
-            onPointerDown={grip.onGripDown}
-            onPointerMove={grip.onGripMove}
-            onPointerUp={grip.onGripUp}
-          >
-            ⋮⋮
-          </span>
+          <span className="lane__grip">⋮⋮</span>
           <span className="lane__name">{track.name}</span>
         </div>
         <div className="lane__controls">
@@ -512,6 +504,31 @@ export function Timeline() {
   const selectClip = useEditor((s) => s.selectClip);
 
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // FLIP: whenever a lane's layout position changes between renders (row
+  // reorder, add/remove), slide it from its old slot to the new one so the
+  // drag reads as "rows making room" instead of an instant jump. offsetTop is
+  // used (not client rects) so in-flight transforms don't skew the deltas.
+  const laneTops = useRef(new Map<string, number>());
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+    const prev = laneTops.current;
+    const next = new Map<string, number>();
+    content.querySelectorAll<HTMLElement>('.lane[data-row-id]').forEach((el) => {
+      const id = el.dataset.rowId as string;
+      const top = el.offsetTop;
+      next.set(id, top);
+      const old = prev.get(id);
+      if (old != null && old !== top && typeof el.animate === 'function') {
+        el.animate(
+          [{ transform: `translateY(${old - top}px)` }, { transform: 'translateY(0)' }],
+          { duration: 160, easing: 'ease-out' },
+        );
+      }
+    });
+    laneTops.current = next;
+  });
 
   // Ctrl/⌘ + wheel (and trackpad pinch) zooms the timeline around the cursor —
   // the frame under the pointer stays put instead of scroll context jumping.

@@ -31,9 +31,9 @@ export const GUIDE: GuideEntry[] = [
   {
     name: 'Keyboard shortcuts',
     category: 'General',
-    tip: 'Space, arrows, S, Delete, ⌘Z/⌘D/⌘S/⌘E.',
-    what: 'Fast keys for the common editing actions.',
-    how: 'Space = play/pause · ←/→ = step one frame (Shift = 1 second) · Home/End = start/end · S = split at playhead · Delete = remove selection · Esc = deselect · ⌘/Ctrl+Z = undo (Shift = redo) · ⌘/Ctrl+D = duplicate · ⌘/Ctrl+S = save project file · ⌘/Ctrl+E = export.',
+    tip: 'Space, arrows, 1-7 panels, T/C add, /=search, S, Delete, ⌘Z/⌘D/⌘S/⌘E/⌘K.',
+    what: 'Fast keys for the common editing actions. All bindings avoid keys the browser reserves (⌘T/⌘W/⌘L never reach the page), and the ones the browser merely defaults (⌘S, ⌘K, /) are intercepted so they act on the editor instead.',
+    how: 'Space = play/pause · ←/→ = step one frame (Shift = 1 second) · Home/End = start/end · 1–7 = switch left-dock panels (again = collapse) · T = add text · C = add caption · / or ⌘/Ctrl+K = search this guide · S = split at playhead · Delete = remove selection · Esc = deselect · ⌘/Ctrl+Z = undo (Shift = redo) · ⌘/Ctrl+D = duplicate · ⌘/Ctrl+S = save project file · ⌘/Ctrl+E = export. Keys do nothing while you are typing in a field.',
   },
   {
     name: 'Text readability',

@@ -25,6 +25,7 @@ import { ExportOverlay } from './ui/ExportOverlay';
 import { ExportDialog } from './ui/ExportDialog';
 import { TranscribeOverlay } from './ui/TranscribeOverlay';
 import { useEditor } from './store/editorStore';
+import { openHelp } from './ui/HelpDialog';
 import { restoreAndStartAutosave } from './store/autosave';
 import type { MediaId, TrackId } from './core/ids';
 import './App.css';
@@ -41,6 +42,8 @@ export default function App() {
   const selectClip = useEditor((s) => s.selectClip);
   const saveProjectFile = useEditor((s) => s.saveProjectFile);
   const openExportDialog = useEditor((s) => s.openExportDialog);
+  const addTextEffect = useEditor((s) => s.addTextEffect);
+  const addCaption = useEditor((s) => s.addCaption);
 
   // Restore any saved project on first mount, then keep autosaving.
   useEffect(() => {
@@ -101,6 +104,20 @@ export default function App() {
       } else if (e.key === 'End') {
         e.preventDefault();
         setPlayhead(busy.project.durationInFrames);
+      } else if ((mod && e.key.toLowerCase() === 'k') || (!mod && (e.key === '/' || e.key === '?'))) {
+        // Search the feature guide. ⌘K and / are interceptable in every
+        // browser (unlike reserved combos such as ⌘T/⌘W, which pages never see
+        // — that's why the bindings avoid them entirely).
+        e.preventDefault();
+        openHelp('');
+      } else if (!mod && e.key >= '1' && e.key <= '9') {
+        // Plain digits (NO modifier — ⌘1..9 stays the browser's tab switcher)
+        // jump between the left-dock panels.
+        window.dispatchEvent(new CustomEvent('dock-panel', { detail: Number(e.key) }));
+      } else if (!mod && e.key.toLowerCase() === 't') {
+        addTextEffect();
+      } else if (!mod && e.key.toLowerCase() === 'c') {
+        addCaption();
       } else if (e.key.toLowerCase() === 's' && !mod) {
         splitSelectedAtPlayhead();
       }
@@ -118,6 +135,8 @@ export default function App() {
     selectClip,
     saveProjectFile,
     openExportDialog,
+    addTextEffect,
+    addCaption,
   ]);
 
   return (

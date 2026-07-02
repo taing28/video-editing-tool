@@ -1050,6 +1050,8 @@
 /* The 30px lane can't fit the stacked column label — lay it out as ONE row so
    the overlay's icon + name actually show in the gutter. */
 .lane--overlay .lane__label {
+  /* stays position: sticky (base rule) — it both pins the gutter during
+     horizontal scroll AND anchors the absolute hover controls below */
   flex-direction: row;
   align-items: center;
   gap: 4px;
@@ -1061,6 +1063,25 @@
   flex: 1;
   min-width: 0;
   font-size: 11px;
+}
+/* Pin/delete are secondary — keep them out of the way (the whole gutter is the
+   reorder grab surface) and reveal them on hover, floating over the name. */
+.lane--overlay .lane__controls {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  background: var(--panel);
+  border-radius: 6px;
+  padding: 1px;
+}
+.lane--overlay .lane__label:hover .lane__controls,
+.lane--overlay .lane__label:focus-within .lane__controls {
+  opacity: 1;
+  pointer-events: auto;
 }
 .lane--overlay .lane__toggle,
 .lane--overlay .lane__delete {
@@ -1556,4 +1577,33 @@
 }
 .rec__error {
   color: #ff8b8b;
+}
+
+/* ---- row reorder drag: grab surface, lifted row, valid-target dimming ---- */
+.lane__label {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+.lane.is-lifted {
+  position: relative;
+  z-index: 7;
+  outline: 1.5px solid var(--accent);
+  outline-offset: -1.5px;
+  background: color-mix(in srgb, var(--accent) 9%, var(--panel));
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+.lane.is-lifted .lane__label {
+  cursor: grabbing;
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+}
+/* While a row is held, rows it CANNOT drop between (other groups) dim out,
+   so the valid slots read at a glance. */
+.timeline__content:has(.lane--overlay.is-lifted) .lane:not(.lane--overlay):not(.is-lifted),
+.timeline__content:has(.lane--video.is-lifted) .lane:not(.lane--video):not(.is-lifted),
+.timeline__content:has(.lane--audio.is-lifted) .lane:not(.lane--audio):not(.is-lifted) {
+  opacity: 0.35;
+}
+.lane {
+  transition: opacity 0.15s ease;
 }

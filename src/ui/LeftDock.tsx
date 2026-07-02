@@ -65,6 +65,18 @@ export function LeftDock() {
     }
   }, [width, active]);
 
+  // Keyboard panel switching: digits 1..N dispatched from the global shortcut
+  // handler. Pressing the active panel's digit again collapses it.
+  useEffect(() => {
+    const onPanel = (e: Event) => {
+      const n = (e as CustomEvent<number>).detail;
+      const id = RAIL[n - 1]?.id;
+      if (id) setActive((a) => (a === id ? null : id));
+    };
+    window.addEventListener('dock-panel', onPanel);
+    return () => window.removeEventListener('dock-panel', onPanel);
+  }, []);
+
   const onResizeDown = (e: React.PointerEvent) => {
     e.preventDefault();
     const startX = e.clientX;
@@ -96,7 +108,7 @@ export function LeftDock() {
             key={r.id}
             className={`dock-rail__btn${active === r.id ? ' is-active' : ''}`}
             data-panel={r.id}
-            data-tip={r.tip}
+            data-tip={`${r.tip} (key ${RAIL.indexOf(r) + 1})`}
             aria-label={r.label}
             aria-pressed={active === r.id}
             onClick={() => setActive((a) => (a === r.id ? null : r.id))}

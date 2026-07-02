@@ -116,6 +116,10 @@ export interface EditorState {
   /** Same, but TRANSIENT (no history entry) — for the grip drag, which snapshots
    * once via beginInteraction so a whole gesture is one undo step. */
   applyRowReorder: (row: TimelineRow, targetId: string, displayPlace: 'above' | 'below') => void;
+  /** The timeline row currently held in a reorder drag (lift styling). Lives in
+   * the store — NOT component state — because reordering can remount the lane
+   * mid-gesture and must not drop the visual. */
+  liftedRowId: string | null;
   /** Pin/unpin a row so it sticks to the top of the timeline. */
   toggleRowPinned: (row: TimelineRow) => void;
   setCanvasSize: (width: number, height: number) => void;
@@ -278,6 +282,7 @@ export const useEditor = create<EditorState>((set, get) => {
     exportDialogOpen: false,
     isTranscribing: false,
     transcribeStatus: null,
+    liftedRowId: null,
 
     selectClip: (id) => set({ selectedClipId: id, selectedEffectId: null }),
     selectEffect: (id) => set({ selectedEffectId: id, selectedClipId: null }),

@@ -14,7 +14,7 @@ npm run verify     # typecheck + unit tests + browser e2e + export test (full ga
 npm run build      # typecheck + production build
 ```
 
-## What works today (Phases 0–21)
+## What works today
 
 - Import images / audio / **video** (Import button, or drop files on the sidebar).
 - Drag a media card onto a track (or double-click to add).
@@ -56,9 +56,23 @@ npm run build      # typecheck + production build
 - **Video clips** decode and render frame-accurately (preview seeks; export seeks per frame).
 - Add a **text overlay** (drag-positioned) or a **caption** (centered, bottom-anchored,
   outlined subtitle) with editable text / size / color / timing. An **Overlays list** in the
-  inspector re-selects any text/caption.
+  inspector re-selects any text/caption — or just **click the element on the preview**
+  (double-click text to edit it).
+- **Text readability kit** — a padded **background box**, **outline**, and **drop shadow**
+  for text overlays, so titles read on any footage (identical in preview and export).
 - **Auto-captions** — transcribe the audio **on-device** (Whisper via transformers.js, no
   upload) into timed captions. The ~60 MB model is lazy-loaded only on first use.
+- **Karaoke captions** — captions can highlight each word as it's spoken; auto-captions
+  carry **real speech-synced word timings** (hand-typed ones use even timing).
+- **Record voiceover** — the 🎙 Record panel captures mic narration (live level meter) and
+  drops it on an audio track at the playhead; music with "duck under voice" dips under it.
+- **Slideshow builder** — one click turns every imported image into a timed sequence with
+  optional Ken Burns motion and crossfades.
+- **Image overlays** — draw any imported image on top of the video (e.g. a character
+  cut-out), drag/resize on the preview, retime on its own lane.
+- **Timeline rows** — every overlay gets a compact lane above the tracks; **drag a row's
+  gutter to reorder it anywhere in one gesture** (the held row lifts, other groups dim,
+  displaced rows slide), or 📌 pin a row into a sticky band.
 - **Shape overlays** (rectangles / color blocks) — drag/resize on the preview; plus a one-click
   **Lower third** (bar + text). (Shapes are a 3rd effect type — the effect model is fully
   extensible.)
@@ -78,10 +92,25 @@ npm run build      # typecheck + production build
 - **Workspace layout** — a slim header (project name + Save/Open/Export/Help), a left **icon dock**
   (Media, Text, Captions, Elements/stickers, Adjust, Settings), the preview, a right properties
   panel, and a timeline action bar (play, split, duplicate, delete, +tracks, snap, zoom).
-- Undo/redo, keyboard shortcuts (Space, ⌘/Ctrl+Z, ⌘/Ctrl+D to duplicate, Delete, S to split).
+- Undo/redo and a full set of **keyboard shortcuts** — chosen to never collide with the
+  browser's own (reserved combos like ⌘T/⌘W are avoided entirely; defaults like ⌘S/⌘K
+  are intercepted so they act on the editor):
 
-**Not yet wired:** auto-transcription (Whisper) to fill the caption track; speed control;
-lower-thirds / more overlay types; other transition styles; Web-Worker render.
+  | Keys | Action |
+  | --- | --- |
+  | `Space` | play / pause |
+  | `←` / `→` (+`Shift`) | step 1 frame (1 second) |
+  | `Home` / `End` | jump to start / end |
+  | `1`–`7` | switch left-dock panels (press again to collapse) |
+  | `T` / `C` | add a text overlay / a caption |
+  | `/` or `⌘/Ctrl+K` | search the built-in feature guide |
+  | `S` | split the selected clip at the playhead |
+  | `Delete` | remove selection · `Esc` deselect |
+  | `⌘/Ctrl+Z` (+`Shift`) | undo (redo) |
+  | `⌘/Ctrl+D` / `⌘/Ctrl+S` / `⌘/Ctrl+E` | duplicate / save project file / export |
+
+**Not yet wired:** bundled fonts for text, platform export presets, image/file stickers
+(emoji stickers exist), Web-Worker render.
 
 ## Testing
 
@@ -110,20 +139,35 @@ Two rules carry the design:
 ```
 src/
   core/
-    time.ts          integer-frame math (+ time.test.ts)
+    time.ts          integer-frame math (+ tests)
     ids.ts           branded ids
     model.ts         Project / Track / Clip / Effect — pure serializable data
     selectors.ts     "what's visible/audible at frame N" (pure queries)
-    edits.ts         move / trim / split / add / remove reducers (+ edits.test.ts)
+    edits.ts         move / trim / split / reorder / slideshow reducers (+ tests)
+    snapping.ts      magnetic edge snapping for clip drags
   render/
     scene.ts         buildScene(project, frame) — the single render-path seam
+    paint.ts         Canvas2D painter (the export side of the seam)
+    export.ts        deterministic frame loop + WebCodecs encode + audio mixdown
+    colorFilter.ts   shared graded-canvas cache (preview/export parity)
+    captionLayout.ts shared text measurement & wrapping (parity)
+    kenburns.ts      pure pan/zoom box animation
     capabilities.ts  WebCodecs export feature-detection
+  playback/
+    audioEngine.ts   live Web-Audio playback · audioFade.ts · duck.ts
+  captions/
+    transcribe.ts    on-device Whisper (word timestamps) · captions.ts
   media/
     registry.ts      runtime drawables (kept OUT of the serializable document)
+    recorder.ts      microphone voiceover capture · thumbnails.ts filmstrips
   store/
     editorStore.ts   Zustand store: document + selection + playhead + undo/redo + clock
+    autosave.ts      IndexedDB autosave/restore · persistence.ts · projectFile.ts · migrate.ts
+  help/
+    guide.ts         searchable plain-language feature guide (also feeds tooltips)
   ui/
-    Toolbar / MediaLibrary / Preview / Timeline / Inspector / App
+    Header / LeftDock / MediaLibrary / Preview / Inspector / EditorBar / Timeline
+    ExportDialog / HelpDialog / Tooltip / ScrollArea / Waveform / ClipFilmstrip
 ```
 
 ## Roadmap
@@ -159,7 +203,11 @@ src/
 - ~~**Phase 19 — Video color grading**~~ ✅ done: per-frame brightness/contrast/saturation on video.
 - ~~**Phase 20 — Project file save/open**~~ ✅ done: portable `.videoproj.json` (timeline + media).
 - ~~**Phase 21 — Duplicate**~~ ✅ done: duplicate a clip or overlay (⌘/Ctrl+D).
-- **Next — More:** platform export presets, stickers, Web-Worker export.
+- ~~**Karaoke captions**~~ ✅ done — per-word highlight, speech-synced timings from Whisper.
+- ~~**Slideshow builder**~~ ✅ done — all images → timed, animated, crossfading sequence.
+- ~~**Record voiceover**~~ ✅ done — in-app mic recording straight onto the timeline.
+- ~~**Text readability kit**~~ ✅ done — background box / outline / shadow with export parity.
+- **Next — More:** bundled fonts, platform export presets, image stickers, Web-Worker export.
 - **Later — Scale:** move render+encode into a Web Worker (note: `OfflineAudioContext` +
   `<video>` seeking are main-thread-only, so this mainly helps pure image+audio projects).
 - Optional: wrap in Electron + mediabunny's server backend for native-speed export.

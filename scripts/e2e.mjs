@@ -648,24 +648,49 @@ try {
   const overlayIdsTopDown = await page.$$eval('.lane--overlay', (els) =>
     els.map((e) => e.getAttribute('data-row-id')),
   );
-  assert(overlayIdsTopDown.length >= 2, 'multiple overlay lanes present to reorder');
-  // Drag the top overlay lane's grip down past the second lane.
-  const firstGrip = page.locator('.lane--overlay .lane__grip').first();
-  const box1 = await firstGrip.boundingBox();
-  const secondLane = page.locator('.lane--overlay').nth(1);
-  const box2 = await secondLane.boundingBox();
-  await page.mouse.move(box1.x + box1.width / 2, box1.y + box1.height / 2);
+  assert(overlayIdsTopDown.length >= 3, 'several overlay lanes present to reorder');
+  // Drag the top overlay lane by its LABEL (whole gutter is the grab surface)
+  // down across TWO lanes in ONE gesture — multi-position reorder.
+  const firstLabel = page.locator('.lane--overlay .lane__label').first();
+  const box1 = await firstLabel.boundingBox();
+  const thirdLane = page.locator('.lane--overlay').nth(2);
+  const box3 = await thirdLane.boundingBox();
+  // Grab in the grip/name zone (hover-revealed pin/delete float at the right).
+  await page.mouse.move(box1.x + 20, box1.y + box1.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box1.x + box1.width / 2, box2.y + box2.height + 4, { steps: 8 });
+  // mid-drag: the held row must be visibly lifted
+  await page.mouse.move(box1.x + 20, box1.y + box1.height / 2 + 10, { steps: 2 });
+  assert(
+    (await page.locator('.lane--overlay.is-lifted').count()) === 1,
+    'held row is visibly lifted during the drag',
+  );
+  await page.mouse.move(box1.x + 20, box3.y + box3.height - 4, { steps: 14 });
   await page.mouse.up();
-  await page.waitForTimeout(120);
+  await page.waitForTimeout(200);
   const afterIds = await page.$$eval('.lane--overlay', (els) =>
     els.map((e) => e.getAttribute('data-row-id')),
   );
+  const movedTo = afterIds.indexOf(overlayIdsTopDown[0]);
   assert(
-    afterIds[0] !== overlayIdsTopDown[0],
-    `top overlay lane changed after reorder (${overlayIdsTopDown[0]} -> ${afterIds[0]})`,
+    movedTo >= 2,
+    `one gesture carried the row across two positions (index 0 -> ${movedTo})`,
   );
+  assert(
+    (await page.locator('.lane--overlay.is-lifted').count()) === 0,
+    'lift styling clears after drop',
+  );
+  const undoDepthAfterDrag = await page.evaluate(() => window.__editor.getState().past.length);
+  await page.click('[aria-label="Undo"]');
+  const undoneIds = await page.$$eval('.lane--overlay', (els) =>
+    els.map((e) => e.getAttribute('data-row-id')),
+  );
+  assert(
+    undoneIds[0] === overlayIdsTopDown[0],
+    'the whole multi-row drag undoes as ONE step',
+  );
+  await page.click('[aria-label="Redo"]');
+  await page.waitForTimeout(80);
+  void undoDepthAfterDrag;
 
   // Pin the Video track row; it should move into the sticky pinned band.
   await page.locator('.lane--video [aria-label="Pin row to top"]').first().click();
@@ -947,6 +972,32 @@ try {
   assert(recAfter.finite && recAfter.recDuration >= 1, `recording has a real duration (${recAfter.recDuration}f)`);
   assert(recAfter.clipCount === recBefore.clips + 1, 'voiceover clip added to the timeline');
   assert(recAfter.clipOnAudioTrack, 'voiceover clip landed on an audio track');
+
+  log('STEP 23 — power keybinds (panel digits, T adds text, / opens search)');
+  await page.keyboard.press('3'); // Text panel
+  await page.waitForSelector('.dock-rail__btn.is-active[data-panel="text"]', { timeout: 5000 });
+  assert(
+    (await page.locator('.dock-rail__btn.is-active[data-panel="text"]').count()) === 1,
+    'digit 3 switches to the Text panel',
+  );
+  const fxBefore = await page.evaluate(
+    () => Object.keys(window.__editor.getState().project.effects).length,
+  );
+  await page.keyboard.press('t');
+  assert(
+    (await page.evaluate(() => Object.keys(window.__editor.getState().project.effects).length)) ===
+      fxBefore + 1,
+    'T adds a text overlay',
+  );
+  await page.keyboard.press('/');
+  await page.waitForSelector('.help-search');
+  assert(
+    await page.evaluate(() => document.activeElement?.classList.contains('help-search')),
+    '/ opens the guide with the search focused',
+  );
+  await page.keyboard.type('snap'); // typing lands in the search, not the shortcuts
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('.help-search', { state: 'detached' });
 
   await browser.close();
 
