@@ -9,7 +9,7 @@
  * - The ruler scrubs the playhead. Lanes are dnd-kit drop targets for the
  *   media library.
  */
-import { memo, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useEditor } from '../store/editorStore';
 import type { Project, Clip, Effect } from '../core/model';
@@ -318,7 +318,7 @@ function OverlayLane({ effect, pxPerFrame }: { effect: Effect; pxPerFrame: numbe
           ⋮⋮
         </span>
         <span className="lane__name" title={overlayLabel(effect, media?.name)}>
-          <span className="lane__ico">{overlayIcon(effect)}</span>
+          <span className={`lane__ico lane__ico--${effect.type}`}>{overlayIcon(effect)}</span>
           {overlayLabel(effect, media?.name)}
         </span>
         <div className="lane__controls">
@@ -361,6 +361,8 @@ function TrackLane({ trackId, pxPerFrame }: { trackId: string; pxPerFrame: numbe
   const toggleRowPinned = useEditor((s) => s.toggleRowPinned);
   const { setNodeRef, isOver } = useDroppable({ id: `track:${trackId}` });
   const track = project.tracks[trackId];
+  // First-run hint: only while the WHOLE project has no clips yet.
+  const projectEmpty = Object.keys(project.clips).length === 0;
   const grip = useRowReorder({
     type: 'track',
     id: trackId as TrackId,
@@ -377,16 +379,18 @@ function TrackLane({ trackId, pxPerFrame }: { trackId: string; pxPerFrame: numbe
       data-row-group={track.kind}
     >
       <div className="lane__label">
-        <span
-          className="lane__grip"
-          title="Drag to reorder"
-          onPointerDown={grip.onGripDown}
-          onPointerMove={grip.onGripMove}
-          onPointerUp={grip.onGripUp}
-        >
-          ⋮⋮
-        </span>
-        <span className="lane__name">{track.name}</span>
+        <div className="lane__head">
+          <span
+            className="lane__grip"
+            title="Drag to reorder"
+            onPointerDown={grip.onGripDown}
+            onPointerMove={grip.onGripMove}
+            onPointerUp={grip.onGripUp}
+          >
+            ⋮⋮
+          </span>
+          <span className="lane__name">{track.name}</span>
+        </div>
         <div className="lane__controls">
           <button
             className={`lane__toggle${track.pinned ? ' is-on' : ''}`}
@@ -431,6 +435,11 @@ function TrackLane({ trackId, pxPerFrame }: { trackId: string; pxPerFrame: numbe
         </div>
       </div>
       <div ref={setNodeRef} className={`lane__area${isOver ? ' is-over' : ''}`}>
+        {track.kind === 'video' && clips.length === 0 && projectEmpty && (
+          <span className="lane__empty">
+            Drag media here — or double-click a card in the Media panel
+          </span>
+        )}
         {clips.map((clip) => (
           <ClipBlock key={clip.id} clip={clip} pxPerFrame={pxPerFrame} />
         ))}
@@ -498,10 +507,53 @@ export function Timeline() {
   const project = useEditor((s) => s.project);
   const playhead = useEditor((s) => s.playhead);
   const pxPerFrame = useEditor((s) => s.pxPerFrame);
+  const isPlaying = useEditor((s) => s.isPlaying);
   const setPlayhead = useEditor((s) => s.setPlayhead);
   const selectClip = useEditor((s) => s.selectClip);
 
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Ctrl/⌘ + wheel (and trackpad pinch) zooms the timeline around the cursor —
+  // the frame under the pointer stays put instead of scroll context jumping.
+  useEffect(() => {
+    const viewport = contentRef.current?.closest<HTMLElement>(
+      '[data-radix-scroll-area-viewport]',
+    );
+    if (!viewport) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      const state = useEditor.getState();
+      const px = state.pxPerFrame;
+      const next = Math.max(0.5, Math.min(40, px * Math.pow(1.1, -e.deltaY / 100)));
+      if (next === px) return;
+      const cursorX = e.clientX - viewport.getBoundingClientRect().left;
+      const frameAt = (viewport.scrollLeft + cursorX - LABEL_WIDTH) / px;
+      state.setZoom(next);
+      requestAnimationFrame(() => {
+        viewport.scrollLeft = Math.max(0, frameAt * next + LABEL_WIDTH - cursorX);
+      });
+    };
+    viewport.addEventListener('wheel', onWheel, { passive: false });
+    return () => viewport.removeEventListener('wheel', onWheel);
+  }, []);
+
+  // While playing, keep the playhead in view: when it exits the viewport,
+  // scroll so it re-enters at ~20% from the left. Manual scrolls are never
+  // fought while paused.
+  useEffect(() => {
+    if (!isPlaying) return;
+    const viewport = contentRef.current?.closest<HTMLElement>(
+      '[data-radix-scroll-area-viewport]',
+    );
+    if (!viewport) return;
+    const x = LABEL_WIDTH + playhead * pxPerFrame;
+    const left = viewport.scrollLeft + LABEL_WIDTH;
+    const right = viewport.scrollLeft + viewport.clientWidth - 24;
+    if (x < left || x > right) {
+      viewport.scrollLeft = Math.max(0, x - LABEL_WIDTH - viewport.clientWidth * 0.2);
+    }
+  }, [playhead, isPlaying, pxPerFrame]);
   // Ordered rows (overlays on top, then tracks), partitioned into a sticky
   // pinned band + the scrolling remainder.
   const rows = timelineRows(project);
@@ -536,8 +588,12 @@ export function Timeline() {
           ref={contentRef}
           style={{ width: contentWidth }}
           onPointerDown={(e) => {
-            // Clicking empty lane space clears selection.
-            if ((e.target as HTMLElement).classList.contains('lane__area')) selectClip(null);
+            // Clicking empty lane space clears selection AND seeks there —
+            // the whole timeline body scrubs, not just the thin ruler.
+            if ((e.target as HTMLElement).classList.contains('lane__area')) {
+              selectClip(null);
+              scrubToClientX(e.clientX);
+            }
           }}
         >
           <Ruler

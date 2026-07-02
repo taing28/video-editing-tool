@@ -416,16 +416,25 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     addClipFromMedia: (mediaId, trackId) => {
-      const { project } = get();
+      const { project, playhead } = get();
       const track = getTrack(project, trackId);
       if (!track) return;
-      // Append after the last clip on the track (no overlaps by default).
+      const media = project.media[mediaId];
       const trackEnd = track.clipOrder.reduce((max, cid) => {
         const c = project.clips[cid];
         return c ? Math.max(max, c.startFrame + c.durationInFrames) : max;
       }, 0);
+      // Prefer the playhead (the scrub-then-place loop); fall back to appending
+      // after the last clip when the playhead position is already occupied.
+      const wanted = playhead;
+      const wantedEnd = wanted + (media?.durationInFrames ?? 1);
+      const occupied = track.clipOrder.some((cid) => {
+        const c = project.clips[cid];
+        return c && c.startFrame < wantedEnd && c.startFrame + c.durationInFrames > wanted;
+      });
+      const startFrame = occupied ? trackEnd : wanted;
       const id = newClipId();
-      const clip = makeClipFromMedia(project, { id, mediaId, track, startFrame: trackEnd });
+      const clip = makeClipFromMedia(project, { id, mediaId, track, startFrame });
       if (!clip) return;
       commit((p) => insertClip(p, clip));
       set({ selectedClipId: id, selectedEffectId: null });

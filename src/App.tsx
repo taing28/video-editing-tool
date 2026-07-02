@@ -37,6 +37,10 @@ export default function App() {
   const removeSelected = useEditor((s) => s.removeSelected);
   const duplicateSelected = useEditor((s) => s.duplicateSelected);
   const splitSelectedAtPlayhead = useEditor((s) => s.splitSelectedAtPlayhead);
+  const setPlayhead = useEditor((s) => s.setPlayhead);
+  const selectClip = useEditor((s) => s.selectClip);
+  const saveProjectFile = useEditor((s) => s.saveProjectFile);
+  const openExportDialog = useEditor((s) => s.openExportDialog);
 
   // Restore any saved project on first mount, then keep autosaving.
   useEffect(() => {
@@ -73,15 +77,48 @@ export default function App() {
       } else if (mod && e.key.toLowerCase() === 'd') {
         e.preventDefault();
         duplicateSelected();
+      } else if (mod && e.key.toLowerCase() === 's') {
+        // Save the project file — NOT the browser's "Save page" dialog.
+        e.preventDefault();
+        saveProjectFile().catch((err) => console.warn('Save failed:', err));
+      } else if (mod && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        openExportDialog();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         removeSelected();
+      } else if (e.key === 'Escape') {
+        selectClip(null); // clears clip AND overlay selection
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        // Frame-step the playhead (Shift = a full second) — split accuracy
+        // depends on being able to land on an exact frame.
+        e.preventDefault();
+        const { playhead, project } = busy;
+        const step = (e.shiftKey ? project.fps : 1) * (e.key === 'ArrowLeft' ? -1 : 1);
+        setPlayhead(playhead + step);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        setPlayhead(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        setPlayhead(busy.project.durationInFrames);
       } else if (e.key.toLowerCase() === 's' && !mod) {
         splitSelectedAtPlayhead();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [togglePlay, undo, redo, removeSelected, duplicateSelected, splitSelectedAtPlayhead]);
+  }, [
+    togglePlay,
+    undo,
+    redo,
+    removeSelected,
+    duplicateSelected,
+    splitSelectedAtPlayhead,
+    setPlayhead,
+    selectClip,
+    saveProjectFile,
+    openExportDialog,
+  ]);
 
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>

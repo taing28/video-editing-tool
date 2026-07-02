@@ -17,6 +17,8 @@ export function ExportDialog() {
   const exportVideo = useEditor((s) => s.exportVideo);
   const width = useEditor((s) => s.project.width);
   const height = useEditor((s) => s.project.height);
+  const durationInFrames = useEditor((s) => s.project.durationInFrames);
+  const fps = useEditor((s) => s.project.fps);
 
   const [scale, setScale] = useState(1);
   const [quality, setQuality] = useState<ExportQuality>('high');
@@ -35,14 +37,22 @@ export function ExportDialog() {
   if (!open) return null;
   const outW = Math.round(width * scale);
   const outH = Math.round(height * scale);
+  const empty = durationInFrames <= 0;
+  const outSeconds = durationInFrames / fps;
 
   return (
     <div className="modal" onClick={close}>
-      <div className="modal__card" onClick={(e) => e.stopPropagation()}>
-        <h3>Export video</h3>
+      <div
+        className="modal__card"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="export-dialog-title"
+      >
+        <h3 id="export-dialog-title">Export video</h3>
         <label className="field">
           <span>Resolution</span>
-          <select value={scale} onChange={(e) => setScale(Number(e.target.value))}>
+          <select autoFocus value={scale} onChange={(e) => setScale(Number(e.target.value))}>
             {RESOLUTIONS.map((r) => (
               <option key={r.label} value={r.scale}>
                 {r.label}
@@ -50,7 +60,10 @@ export function ExportDialog() {
             ))}
           </select>
         </label>
-        <label className="field">
+        <label
+          className="field"
+          data-tip="High = best-looking, biggest file. Low = fastest, smallest."
+        >
           <span>Quality</span>
           <select value={quality} onChange={(e) => setQuality(e.target.value as ExportQuality)}>
             <option value="high">High</option>
@@ -58,7 +71,10 @@ export function ExportDialog() {
             <option value="low">Low</option>
           </select>
         </label>
-        <label className="field">
+        <label
+          className="field"
+          data-tip="Auto picks MP4 when the browser can encode it (plays everywhere), otherwise WebM."
+        >
           <span>Format</span>
           <select value={format} onChange={(e) => setFormat(e.target.value as ExportFormat)}>
             <option value="auto">Auto (MP4 / WebM)</option>
@@ -67,7 +83,9 @@ export function ExportDialog() {
           </select>
         </label>
         <p className="modal__hint">
-          Output: {outW}×{outH}
+          {empty
+            ? 'Your timeline is empty — add media to a track first, then export.'
+            : `Output: ${outW}×${outH} · ${outSeconds.toFixed(1)}s`}
         </p>
         <div className="modal__actions">
           <button className="btn" onClick={close}>
@@ -75,6 +93,7 @@ export function ExportDialog() {
           </button>
           <button
             className="btn btn--primary export-dialog__go"
+            disabled={empty}
             onClick={() => void exportVideo({ resolutionScale: scale, quality, format })}
           >
             Export

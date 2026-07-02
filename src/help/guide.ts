@@ -26,7 +26,21 @@ export const GUIDE: GuideEntry[] = [
     category: 'Media',
     tip: 'Double-click a media card, or drag it onto a track.',
     what: 'Places a piece of media on a track as a "clip" at a point in time.',
-    how: 'Double-click a card to append it after the last clip, or drag the card onto a track. Images get a default 5-second length.',
+    how: 'Double-click a card to place it at the playhead (or after the last clip if that spot is taken), or drag the card onto a track. Images get a default 5-second length.',
+  },
+  {
+    name: 'Keyboard shortcuts',
+    category: 'General',
+    tip: 'Space, arrows, S, Delete, ⌘Z/⌘D/⌘S/⌘E.',
+    what: 'Fast keys for the common editing actions.',
+    how: 'Space = play/pause · ←/→ = step one frame (Shift = 1 second) · Home/End = start/end · S = split at playhead · Delete = remove selection · Esc = deselect · ⌘/Ctrl+Z = undo (Shift = redo) · ⌘/Ctrl+D = duplicate · ⌘/Ctrl+S = save project file · ⌘/Ctrl+E = export.',
+  },
+  {
+    name: 'Stickers',
+    category: 'Overlays',
+    tip: 'One-click emoji overlays (⭐ 🔥 😂 …).',
+    what: 'Big emoji placed on top of the video — quick reactions and accents, stored as text overlays.',
+    how: 'Open Elements (left dock) and click an emoji. Drag it on the preview to position, resize by a corner; set timing in the Inspector like any text overlay.',
   },
   {
     name: 'Trim',

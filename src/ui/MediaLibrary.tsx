@@ -101,7 +101,7 @@ export function MediaLibrary() {
       }}
     >
       <div className="library__head">
-        <span>Media</span>
+        <span>{media.length > 0 ? `${media.length} item${media.length > 1 ? 's' : ''}` : ''}</span>
         <button className="btn btn--sm" onClick={() => inputRef.current?.click()}>
           Import
         </button>
@@ -128,12 +128,12 @@ export function MediaLibrary() {
               onClick={makeSlideshow}
               data-tip="Add all imported images to the video track as a timed sequence, in one step."
             >
-              🎞 Make slideshow ({imageCount})
+              🎞 Make slideshow from {imageCount} image{imageCount > 1 ? 's' : ''}
             </button>
           </div>
           <div className="slideshow__opts">
             <label className="slideshow__opt">
-              <span>Sec/image</span>
+              <span>Seconds per image</span>
               <input
                 type="number"
                 min={0.5}
@@ -142,15 +142,21 @@ export function MediaLibrary() {
                 onChange={(e) => setSecs(Number(e.target.value))}
               />
             </label>
-            <label className="slideshow__opt slideshow__opt--check">
+            <label
+              className="slideshow__opt slideshow__opt--check"
+              data-tip="Slowly zooms/pans each photo so stills feel alive."
+            >
               <input
                 type="checkbox"
                 checked={kenBurns}
                 onChange={(e) => setKenBurns(e.target.checked)}
               />
-              <span>Ken Burns</span>
+              <span>Pan &amp; zoom (Ken Burns)</span>
             </label>
-            <label className="slideshow__opt slideshow__opt--check">
+            <label
+              className="slideshow__opt slideshow__opt--check"
+              data-tip="Each image fades into the next (0.5s overlap)."
+            >
               <input
                 type="checkbox"
                 checked={crossfade}

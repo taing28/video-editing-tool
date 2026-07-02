@@ -84,6 +84,18 @@ export function Preview() {
   const updateText = useEditor((s) => s.updateTextEffect);
   const updateShape = useEditor((s) => s.updateShape);
   const updateImageOverlay = useEditor((s) => s.updateImageOverlay);
+  const selectClip = useEditor((s) => s.selectClip);
+  const selectEffect = useEditor((s) => s.selectEffect);
+  const projectEmpty = useEditor((s) => Object.keys(s.project.clips).length === 0);
+
+  // Select an overlay, then move keyboard focus into its Inspector text field
+  // (double-click-to-edit on the canvas).
+  const editEffectText = (id: EffectId) => {
+    selectEffect(id);
+    setTimeout(() => {
+      document.querySelector<HTMLTextAreaElement>('.inspector textarea')?.focus();
+    }, 60);
+  };
 
   const boxRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
@@ -245,9 +257,17 @@ export function Preview() {
     <div className="preview" ref={boxRef}>
       {scale > 0 && (
         <Stage ref={stageRef} width={stageW} height={stageH} className="preview__stage">
-          {/* base scene (everything except the selected element) */}
-          <Layer ref={layerRef} scaleX={scale} scaleY={scale} listening={false}>
-            <Rect x={0} y={0} width={scene.width} height={scene.height} fill={scene.background} />
+          {/* base scene (everything except the selected element) — clickable:
+              Konva bubbles the top-most hit, so clicking an element selects it */}
+          <Layer ref={layerRef} scaleX={scale} scaleY={scale}>
+            <Rect
+              x={0}
+              y={0}
+              width={scene.width}
+              height={scene.height}
+              fill={scene.background}
+              onClick={() => selectClip(null)}
+            />
             {scene.layers.map((layer) => {
               if (
                 layer === selImage ||
@@ -266,6 +286,7 @@ export function Preview() {
                     width={layer.width}
                     height={layer.height}
                     opacity={layer.opacity}
+                    onClick={() => selectEffect(layer.effectId as EffectId)}
                   />
                 );
               }
@@ -279,6 +300,7 @@ export function Preview() {
                     height={layer.height}
                     fill={layer.color}
                     opacity={layer.opacity}
+                    onClick={() => selectEffect(layer.effectId as EffectId)}
                   />
                 );
               }
@@ -300,6 +322,7 @@ export function Preview() {
                       width={layer.width}
                       height={layer.height}
                       opacity={layer.opacity}
+                      onClick={() => selectClip(layer.clipId as ClipId)}
                     />
                   </Group>
                 );
@@ -317,6 +340,8 @@ export function Preview() {
                     fill={layer.color}
                     opacity={layer.opacity}
                     lineHeight={1.2}
+                    onClick={() => selectEffect(layer.effectId as EffectId)}
+                    onDblClick={() => editEffectText(layer.effectId as EffectId)}
                   />
                 );
               }
@@ -333,7 +358,12 @@ export function Preview() {
                 );
                 const y0 = scene.height - capLines.length * lineHeight - layer.fontSize;
                 return (
-                  <Group key={layer.effectId} opacity={layer.opacity}>
+                  <Group
+                    key={layer.effectId}
+                    opacity={layer.opacity}
+                    onClick={() => selectEffect(layer.effectId as EffectId)}
+                    onDblClick={() => editEffectText(layer.effectId as EffectId)}
+                  >
                     {capLines.flatMap((line, li) =>
                       line.words.map((w) => (
                         <KonvaText
@@ -376,6 +406,8 @@ export function Preview() {
                   align="center"
                   wrap="none"
                   lineHeight={1.2}
+                  onClick={() => selectEffect(layer.effectId as EffectId)}
+                  onDblClick={() => editEffectText(layer.effectId as EffectId)}
                   y={scene.height - wrapped.length * layer.fontSize * 1.2 - layer.fontSize}
                   fontSize={layer.fontSize}
                   fontFamily={layer.fontFamily}
@@ -538,6 +570,16 @@ export function Preview() {
             </Layer>
           )}
         </Stage>
+      )}
+      {projectEmpty && (
+        <div className="preview__hint">
+          <span>
+            Your video will appear here.
+            <br />
+            Import media in the <b>Media</b> panel, then drag it onto a track below (or
+            double-click a card).
+          </span>
+        </div>
       )}
       <div className="preview__badge">
         {project.width}×{project.height} · {project.fps}fps

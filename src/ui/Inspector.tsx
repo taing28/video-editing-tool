@@ -15,9 +15,21 @@ import {
   useSelectedImageEffect,
 } from '../store/editorStore';
 import { framesToSeconds, secondsToFrames } from '../core/time';
+import { containedBox, coverBox } from '../core/model';
 import type { TransitionType, KenBurns } from '../core/model';
 import type { EffectId } from '../core/ids';
 import { HelpLink } from './HelpDialog';
+import { ScrollArea } from './ScrollArea';
+
+const WEIGHT_NAMES: Record<number, string> = {
+  300: 'Light',
+  400: 'Regular',
+  500: 'Medium',
+  600: 'Semibold',
+  700: 'Bold',
+  800: 'Extra bold',
+  900: 'Black',
+};
 
 /** Fade in/out (seconds) for a timed overlay — shared by text/caption/shape. */
 function OverlayFadeFields({
@@ -101,7 +113,7 @@ function TextEffectEditor() {
         >
           {[300, 400, 500, 600, 700, 800, 900].map((w) => (
             <option key={w} value={w}>
-              {w}
+              {WEIGHT_NAMES[w]} ({w})
             </option>
           ))}
         </select>
@@ -166,14 +178,38 @@ function ClipEditor() {
   const track = project.tracks[clip.trackId];
   const hasPrev = track ? track.clipOrder.indexOf(clip.id) > 0 : false;
 
+  // Which frame-fit mode the current transform matches (for the active state).
+  const near = (a: number, b: number) => Math.abs(a - b) < 1.5;
+  const boxEq = (b: { x: number; y: number; width: number; height: number }) =>
+    isVisual &&
+    near(clip.transform.x, b.x) &&
+    near(clip.transform.y, b.y) &&
+    near(clip.transform.width, b.width) &&
+    near(clip.transform.height, b.height);
+  const natW = media?.width ?? project.width;
+  const natH = media?.height ?? project.height;
+  const fitMode = !isVisual
+    ? null
+    : boxEq(containedBox(natW, natH, project.width, project.height))
+      ? 'contain'
+      : boxEq(coverBox(natW, natH, project.width, project.height))
+        ? 'cover'
+        : boxEq({ x: 0, y: 0, width: project.width, height: project.height })
+          ? 'stretch'
+          : null;
+
   return (
     <div className="inspector__group">
       <h3 className="inspector__title">
         Clip <HelpLink topic="Trim" />
       </h3>
       <p className="inspector__row">{media?.name ?? clip.mediaId}</p>
-      <p className="inspector__row">
-        start {clip.startFrame}f · {clip.durationInFrames}f
+      <p
+        className="inspector__row"
+        data-tip={`Frames: starts at ${clip.startFrame}, ${clip.durationInFrames} long.`}
+      >
+        starts at {framesToSeconds(clip.startFrame, project.fps).toFixed(1)}s ·{' '}
+        {seconds.toFixed(1)}s long
       </p>
       {hasSpeed && (
         <label
@@ -259,13 +295,22 @@ function ClipEditor() {
           >
             <span>Frame fit</span>
             <div className="field-row">
-              <button className="btn btn--mini" onClick={() => fitClip(clip.id, 'contain')}>
+              <button
+                className={`btn btn--mini${fitMode === 'contain' ? ' is-active' : ''}`}
+                onClick={() => fitClip(clip.id, 'contain')}
+              >
                 Fit
               </button>
-              <button className="btn btn--mini" onClick={() => fitClip(clip.id, 'cover')}>
+              <button
+                className={`btn btn--mini${fitMode === 'cover' ? ' is-active' : ''}`}
+                onClick={() => fitClip(clip.id, 'cover')}
+              >
                 Fill
               </button>
-              <button className="btn btn--mini" onClick={() => fitClip(clip.id, 'stretch')}>
+              <button
+                className={`btn btn--mini${fitMode === 'stretch' ? ' is-active' : ''}`}
+                onClick={() => fitClip(clip.id, 'stretch')}
+              >
                 Stretch
               </button>
             </div>
@@ -660,29 +705,33 @@ export function Inspector() {
 
   return (
     <aside className="inspector">
-      {text ? (
-        <TextEffectEditor />
-      ) : caption ? (
-        <CaptionEditor />
-      ) : shape ? (
-        <ShapeEditor />
-      ) : image ? (
-        <ImageEffectEditor />
-      ) : clip ? (
-        <ClipEditor />
-      ) : (
-        <>
-          <div className="inspector__empty">
-            <div className="inspector__empty-icon">⚙</div>
-            <p className="inspector__empty-title">Nothing selected</p>
-            <p className="inspector__empty-sub">
-              Click a clip or overlay on the timeline to edit its properties. Project size and
-              background live in the Settings panel (left).
-            </p>
-          </div>
-          {hasOverlays && <OverlaysList />}
-        </>
-      )}
+      <ScrollArea className="inspector__scroll" orientation="vertical">
+        <div className="inspector__body">
+          {text ? (
+            <TextEffectEditor />
+          ) : caption ? (
+            <CaptionEditor />
+          ) : shape ? (
+            <ShapeEditor />
+          ) : image ? (
+            <ImageEffectEditor />
+          ) : clip ? (
+            <ClipEditor />
+          ) : (
+            <>
+              <div className="inspector__empty">
+                <div className="inspector__empty-icon">⚙</div>
+                <p className="inspector__empty-title">Nothing selected</p>
+                <p className="inspector__empty-sub">
+                  Click a clip or overlay on the timeline (or an element on the preview) to edit
+                  its properties. Project size and background live in the Settings panel (left).
+                </p>
+              </div>
+              {hasOverlays && <OverlaysList />}
+            </>
+          )}
+        </div>
+      </ScrollArea>
     </aside>
   );
 }

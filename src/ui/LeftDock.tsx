@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 import { useEditor, useSelectedClip } from '../store/editorStore';
 import { MediaLibrary } from './MediaLibrary';
 import { HelpLink } from './HelpDialog';
+import { ScrollArea } from './ScrollArea';
 
 type PanelId = 'media' | 'text' | 'captions' | 'elements' | 'adjust' | 'settings';
 
@@ -110,12 +111,14 @@ export function LeftDock() {
             <span>{current.label}</span>
           </div>
           <div className="dock__panel-body">
-            {active === 'media' && <MediaLibrary />}
-            {active === 'text' && <TextPanel />}
-            {active === 'captions' && <CaptionsPanel />}
-            {active === 'elements' && <ElementsPanel />}
-            {active === 'adjust' && <AdjustPanel />}
-            {active === 'settings' && <SettingsPanel />}
+            <ScrollArea className="dock__panel-scroll" orientation="vertical">
+              {active === 'media' && <MediaLibrary />}
+              {active === 'text' && <TextPanel />}
+              {active === 'captions' && <CaptionsPanel />}
+              {active === 'elements' && <ElementsPanel />}
+              {active === 'adjust' && <AdjustPanel />}
+              {active === 'settings' && <SettingsPanel />}
+            </ScrollArea>
           </div>
           <div
             className="dock__resize"
@@ -227,7 +230,7 @@ function ElementsPanel() {
         </div>
       )}
       <div className="panel-subhead">
-        Stickers <HelpLink topic="Text overlay" />
+        Stickers <HelpLink topic="Stickers" />
       </div>
       <div className="sticker-grid">
         {STICKERS.map((s) => (

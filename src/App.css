@@ -151,6 +151,16 @@
 .dock-rail__label {
   font-size: 10px;
 }
+/* Short windows: drop the rail labels so all six tools stay reachable
+   (tooltips still carry the names). */
+@media (max-height: 700px) {
+  .dock-rail__label {
+    display: none;
+  }
+  .dock-rail__btn {
+    padding: 7px 2px;
+  }
+}
 .dock__panel {
   position: relative;
   height: 100%;
@@ -166,7 +176,10 @@
 .dock__panel-body {
   flex: 1;
   min-height: 0;
-  overflow: hidden auto;
+  overflow: hidden; /* the inner ScrollArea owns scrolling (visible thumb) */
+}
+.dock__panel-scroll {
+  height: 100%;
 }
 .dock__resize {
   position: absolute;
@@ -404,8 +417,10 @@
 .toolbar__name:hover {
   border-color: var(--line);
 }
-.toolbar__name:focus {
+.toolbar__name:focus:not(:focus-visible) {
   outline: none;
+}
+.toolbar__name:focus {
   border-color: var(--accent);
   background: var(--panel-2);
 }
@@ -661,8 +676,8 @@
   position: absolute;
   top: 4px;
   right: 4px;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   display: grid;
   place-items: center;
   border: none;
@@ -749,8 +764,13 @@
   height: 100%;
   background: var(--panel);
   border-left: 1px solid var(--line);
+  overflow: hidden; /* the inner ScrollArea owns scrolling (visible thumb) */
+}
+.inspector__scroll {
+  height: 100%;
+}
+.inspector__body {
   padding: 12px;
-  overflow: hidden auto; /* vertical scroll only; no horizontal overflow */
 }
 .inspector__group h3 {
   margin: 4px 0 12px;
@@ -924,7 +944,7 @@
   height: 26px;
   border-bottom: 1px solid var(--line);
   background: var(--panel-2);
-  cursor: text;
+  cursor: col-resize;
 }
 .ruler__tick {
   position: absolute;
@@ -960,16 +980,25 @@
   color: var(--muted);
   font-size: 11px;
 }
+.lane__head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
 .lane__name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 500;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
 }
 .lane__controls {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 .lane__toggle,
 .lane__delete {
@@ -980,7 +1009,11 @@
   cursor: pointer;
   font-size: 11px;
   line-height: 1;
-  padding: 3px 6px;
+  min-width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
 }
 .lane__toggle.is-off {
   opacity: 0.5;
@@ -1014,10 +1047,35 @@
 .lane--overlay {
   height: 30px;
 }
+/* The 30px lane can't fit the stacked column label — lay it out as ONE row so
+   the overlay's icon + name actually show in the gutter. */
+.lane--overlay .lane__label {
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+}
 .lane--overlay .lane__name {
   display: inline-flex;
   align-items: center;
+  flex: 1;
+  min-width: 0;
   font-size: 11px;
+}
+.lane--overlay .lane__toggle,
+.lane--overlay .lane__delete {
+  min-width: 18px;
+  height: 18px;
+}
+/* Match the gutter badge to the overlay's clip-bar color. */
+.lane__ico--caption {
+  background: #5a6acb;
+}
+.lane__ico--shape {
+  background: #8a5bd0;
+}
+.lane__ico--image {
+  background: #b0529e;
 }
 .lane--overlay.is-active .lane__name {
   color: #fff;
@@ -1037,16 +1095,17 @@
   font-weight: 700;
   flex: 0 0 auto;
 }
-.clip--overlay {
+/* Per-type overlay colors (doubled class beats the .clip base rule below). */
+.clip.clip--overlay {
   background: var(--accent-2);
 }
-.clip--ov-caption {
+.clip.clip--ov-caption {
   background: #5a6acb;
 }
-.clip--ov-shape {
+.clip.clip--ov-shape {
   background: #8a5bd0;
 }
-.clip--ov-image {
+.clip.clip--ov-image {
   background: #b0529e;
 }
 
@@ -1329,8 +1388,10 @@
   padding: 9px 11px;
   font: inherit;
 }
-.help-search:focus {
+.help-search:focus:not(:focus-visible) {
   outline: none;
+}
+.help-search:focus {
   border-color: var(--accent);
 }
 .help-list {
@@ -1412,4 +1473,41 @@
 }
 .timeline__pinned .lane {
   background: color-mix(in srgb, var(--panel-2) 80%, var(--accent) 6%);
+}
+
+/* Active state for the Frame-fit segmented buttons (Fit / Fill / Stretch). */
+.btn--mini.is-active {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--text);
+}
+
+/* First-run guidance — shown only while the project has no clips. */
+.preview__hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  pointer-events: none;
+  max-width: none;
+}
+.preview__hint span {
+  max-width: 380px;
+}
+.lane__empty {
+  position: absolute;
+  inset: 8px 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px dashed color-mix(in srgb, var(--muted) 45%, transparent);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
 }

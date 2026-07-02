@@ -44,6 +44,21 @@ export function Tooltip() {
       if (to && active.contains(to)) return; // moved within the same element
       hide();
     };
+    // Keyboard focus shows the tip immediately (no hover delay) — most icon
+    // buttons have no visible text, so this IS their label for keyboard users.
+    // `:focus-visible` keeps mouse clicks from popping tooltips.
+    const onFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      const el = target?.closest?.('[data-tip]') ?? null;
+      if (!el || !target?.matches(':focus-visible')) return;
+      active = el;
+      clear();
+      const text = el.getAttribute('data-tip');
+      if (text) setTip({ text, rect: el.getBoundingClientRect() });
+    };
+    const onFocusOut = () => hide();
+    document.addEventListener('focusin', onFocusIn, true);
+    document.addEventListener('focusout', onFocusOut, true);
     document.addEventListener('pointerover', onOver, true);
     document.addEventListener('pointerout', onOut, true);
     window.addEventListener('pointerdown', hide, true);
@@ -51,6 +66,8 @@ export function Tooltip() {
     window.addEventListener('wheel', hide, true);
     return () => {
       clear();
+      document.removeEventListener('focusin', onFocusIn, true);
+      document.removeEventListener('focusout', onFocusOut, true);
       document.removeEventListener('pointerover', onOver, true);
       document.removeEventListener('pointerout', onOut, true);
       window.removeEventListener('pointerdown', hide, true);

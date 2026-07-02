@@ -8,12 +8,23 @@ body,
 body {
   background: #0e0f13;
   color: #e6e8ee;
+  /* One app-wide font: headings, portaled dialogs, overlays and tooltips all
+   * inherit this instead of falling back to the browser's serif default. */
+  font: 13px/1.45 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Theme native controls (range sliders, checkboxes) to the accent. */
+  accent-color: #5b8cff;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
 
 button {
   font-family: inherit;
+}
+
+/* Keyboard focus is visible everywhere; mouse clicks stay clean. */
+:where(button, input, select, textarea, a, [role='separator']):focus-visible {
+  outline: 2px solid #5b8cff;
+  outline-offset: 2px;
 }
 
 /* No native scrollbar UI anywhere — scrolling still works (wheel / trackpad). */
