@@ -17,7 +17,24 @@ npm run verify   # FULL gate: typecheck + unit + e2e + export + video + persist
 Architecture overview + file map: see `README.md`. Tests live in `scripts/` (Playwright)
 and `src/**/*.test.ts` (Vitest).
 
-## Status: Slideshow builder complete ✅ — `npm run verify` green (78 unit + e2e + export + video + persist)
+## Status: bug-hunt + UX pass + voiceover/karaoke-sync/readability complete ✅ — `npm run verify` green (95 unit + e2e + export + video + persist)
+
+### 2026-07-02 — adversarial bug hunt (25 fixes), UX pass (18 improvements), 3 features
+- **Bug fixes** (multi-agent adversarial review, all verified by direct code trace): speed-aware
+  split/trim math, row-reorder undo flood, scrub-while-playing, shortcuts-during-export, caption
+  wrap + line-height + font-weight preview/export parity, same-media dual-clip export seeking,
+  Whisper pipeline caching, object-URL leaks, autosave restore resilience (one bad asset no longer
+  nukes the project), `computeDuration` now includes overlay ends, and more (see the fix commit).
+- **UX**: app-wide font + focus rings, playhead keyboard control (arrows/Home/End) + ⌘S/⌘E,
+  add-at-playhead, timeline follows playback + ⌘wheel zoom-at-cursor, click-to-select on the
+  preview (dbl-click text to edit), first-run hints, visible lane names + per-type overlay colors,
+  scrollable inspector/dock panels, export dialog guard/duration/a11y/Escape.
+- **Record voiceover** ✅ — 🎙 Record dock panel (level meter + timer), lands on an audio track at
+  the playhead through the normal import path (ducking works). `src/media/recorder.ts`.
+- **Speech-synced karaoke** ✅ — auto-captions now carry real per-word timings
+  (`return_timestamps:'word'` + `groupWords`); pauses un-highlight; even timing stays the fallback.
+- **Text readability kit** ✅ — background box (shared-measure parity), outline, shadow on text
+  overlays; Inspector "Readability" section.
 
 ### Timeline row reorder + pin (executed from docs/superpowers/plans/2026-07-01-timeline-row-reorder-pin.md)
 - `Project.effectOrder` (bottom-to-top paint order) + `Track.pinned`/`BaseEffect.pinned`; migrated for old docs.
@@ -174,11 +191,11 @@ Spec: `docs/superpowers/specs/2026-07-01-timeline-overlays-scroll-design.md`.
   as a timed sequence on the video track (per-image seconds + Ken Burns + crossfade options), one
   undo step. Pure `buildSlideshow(p, clipIds, opts)` reducer (alternating Ken Burns; each clip
   overlaps the previous by `crossfadeFrames` → the existing overlap→dissolve makes the crossfade).
-- [ ] **Record voiceover** — capture mic narration in-app (`MediaRecorder`), add it as an audio
-  clip on an audio track; works with the existing `duck` so music dips under it. Needs a record
-  UI (arm/level/stop) + permission handling; the recorded blob imports through the normal path.
-- [ ] **Text readability kit** — optional background/highlight box behind text (drawn from a shared
-  measured-text box so preview + export agree), outline + drop-shadow, and a few bundled fonts.
+- [x] **Record voiceover** ✅ done — 🎙 Record dock panel (`media/recorder.ts` + `addRecordedVoiceover`):
+  arm/level-meter/stop, recorded blob imports through the normal path, clip lands at the playhead
+  on an audio track; ducking works. e2e records via a synthesized WebAudio mic.
+- [x] **Text readability kit** ✅ done — background box / outline / shadow on text overlays, box
+  sized by a shared `measureTextBlock` so preview + export agree. (Bundled fonts still TODO.)
 
 ### Other / lower priority
 
