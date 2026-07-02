@@ -29,6 +29,13 @@ export const GUIDE: GuideEntry[] = [
     how: 'Double-click a card to place it at the playhead (or after the last clip if that spot is taken), or drag the card onto a track. Images get a default 5-second length.',
   },
   {
+    name: 'Guided tour (tutorial)',
+    category: 'General',
+    tip: 'A step-by-step walkthrough from import to export.',
+    what: 'A spotlight tour for new users: it highlights each part of the editor in order — import media, arrange clips, preview, voiceover, captions, inspector — ending at Export. Offered automatically on your first visit in a browser.',
+    how: 'Click the 🎓 Tour button in the header any time to replay it. Use Next / Back (or ←/→), Esc to leave. Whether you finished or skipped it is remembered in this browser.',
+  },
+  {
     name: 'Keyboard shortcuts',
     category: 'General',
     tip: 'Space, arrows, 1-7 panels, T/C add, /=search, S, Delete, ⌘Z/⌘D/⌘S/⌘E/⌘K.',

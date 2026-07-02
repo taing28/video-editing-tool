@@ -1607,3 +1607,71 @@
 .lane {
   transition: opacity 0.15s ease;
 }
+
+/* ---- guided tour (ui/Tour.tsx) ---- */
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 300; /* above every app surface; blocks clicks while touring */
+}
+.tour__dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 8, 14, 0.72);
+}
+.tour__spot {
+  position: absolute;
+  border-radius: 10px;
+  /* the "hole": everything OUTSIDE the spot is dimmed by one huge shadow */
+  box-shadow: 0 0 0 100vmax rgba(5, 8, 14, 0.72);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  pointer-events: none;
+  transition: left 0.28s ease, top 0.28s ease, width 0.28s ease, height 0.28s ease;
+}
+.tour__card {
+  position: absolute;
+  width: 340px;
+  max-width: calc(100vw - 28px);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px 12px;
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55);
+  transition: left 0.28s ease, top 0.28s ease;
+}
+.tour__card--center {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.tour__meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+.tour__title {
+  margin: 6px 0 6px;
+  font-size: 15px;
+}
+.tour__body {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.tour__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tour__skip {
+  color: var(--muted);
+}
+.tour__nav {
+  display: flex;
+  gap: 8px;
+}
+.tour-prompt .modal__card h3 {
+  margin-top: 0;
+}

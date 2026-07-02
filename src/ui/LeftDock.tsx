@@ -73,8 +73,18 @@ export function LeftDock() {
       const id = RAIL[n - 1]?.id;
       if (id) setActive((a) => (a === id ? null : id));
     };
+    // Non-toggling variant (by panel id) — the guided tour uses this to make
+    // sure a step's panel is open regardless of the current one.
+    const onPanelOpen = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail as PanelId;
+      if (RAIL.some((r) => r.id === id)) setActive(id);
+    };
     window.addEventListener('dock-panel', onPanel);
-    return () => window.removeEventListener('dock-panel', onPanel);
+    window.addEventListener('dock-panel-open', onPanelOpen);
+    return () => {
+      window.removeEventListener('dock-panel', onPanel);
+      window.removeEventListener('dock-panel-open', onPanelOpen);
+    };
   }, []);
 
   const onResizeDown = (e: React.PointerEvent) => {

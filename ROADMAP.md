@@ -19,6 +19,17 @@ and `src/**/*.test.ts` (Vitest).
 
 ## Status: bug-hunt + UX pass + voiceover/karaoke-sync/readability complete ✅ — `npm run verify` green (95 unit + e2e + export + video + persist)
 
+### 2026-07-02 (later still) — guided tour for new users
+- **First-run tutorial** — `ui/Tour.tsx` + steps in `help/tour.ts`: a spotlight tour (dim overlay
+  with an animated cut-out over each target + a card with title/description, Next/Back/Skip,
+  ←/→/Esc). 13 steps walk the whole loop: toolbox → import → timeline → preview → edit bar →
+  clips → voiceover → captions → titles → inspector → help → export. Steps that live in a dock
+  panel auto-open it (`dock-panel-open` event, non-toggling).
+- Offered automatically on the first visit in a browser (suppressed under `?nopersist` so tests
+  aren't covered by the prompt); finishing OR skipping writes `tour:done` to localStorage so it
+  never nags. Replay anytime via the 🎓 **Tour** button in the header. e2e STEP 24 covers replay,
+  spotlight, auto-open, Back, Esc→flag, and the first-run prompt on a fresh page.
+
 ### 2026-07-02 (later) — row reorder rebuilt, power keybinds, docs refresh
 - **Row reorder fixed + animated** — the old drag died after ONE position because React can
   remount a lane when the list reorders, which silently releases pointer capture (and kills

@@ -24,6 +24,7 @@ import { Timeline } from './ui/Timeline';
 import { ExportOverlay } from './ui/ExportOverlay';
 import { ExportDialog } from './ui/ExportDialog';
 import { TranscribeOverlay } from './ui/TranscribeOverlay';
+import { Tour } from './ui/Tour';
 import { useEditor } from './store/editorStore';
 import { openHelp } from './ui/HelpDialog';
 import { restoreAndStartAutosave } from './store/autosave';
@@ -156,6 +157,7 @@ export default function App() {
       <ExportDialog />
       <ExportOverlay />
       <TranscribeOverlay />
+      <Tour />
       <Tooltip />
     </DndContext>
   );

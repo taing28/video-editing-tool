@@ -6,6 +6,7 @@ import { useRef } from 'react';
 import { useEditor } from '../store/editorStore';
 import { checkExportSupport } from '../render/capabilities';
 import { HelpButton } from './HelpDialog';
+import { startTour } from './Tour';
 
 export function Header() {
   const projectName = useEditor((s) => s.project.name);
@@ -76,6 +77,14 @@ export function Header() {
           }
         >
           ⬇ Export
+        </button>
+        <button
+          className="btn tour-btn"
+          onClick={startTour}
+          aria-label="Replay the guided tour"
+          data-tip="Replay the step-by-step tour of the editor (import → edit → export)."
+        >
+          🎓 Tour
         </button>
         <HelpButton />
       </div>

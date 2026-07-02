@@ -999,6 +999,44 @@ try {
   await page.keyboard.press('Escape');
   await page.waitForSelector('.help-search', { state: 'detached' });
 
+  log('STEP 24 — guided tour (header replay, steps, spotlight, localStorage flag)');
+  // ?nopersist suppresses the FIRST-RUN prompt (this run), so trigger via the button.
+  await page.click('.tour-btn');
+  await page.waitForSelector('.tour');
+  assert(
+    (await page.locator('.tour__card--center').count()) === 1,
+    'tour opens on a centered welcome step',
+  );
+  await page.click('.tour__next');
+  await page.waitForSelector('.tour__spot');
+  assert((await page.locator('.tour__spot').count()) === 1, 'step 2 spotlights a UI target');
+  const step2Title = await page.locator('.tour__title').textContent();
+  await page.click('.tour__next'); // step 3 opens the Media panel via the tour
+  await page.waitForSelector('.dock-rail__btn.is-active[data-panel="media"]');
+  assert(true, 'tour step auto-opens the panel it points at');
+  await page.click('.tour__nav .btn:has-text("Back")');
+  await page.waitForFunction(
+    (t) => document.querySelector('.tour__title')?.textContent === t,
+    step2Title,
+  );
+  assert(true, 'Back returns to the previous step');
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('.tour', { state: 'detached' });
+  const tourFlag = await page.evaluate(() => localStorage.getItem('tour:done'));
+  assert(tourFlag === 'skipped', `leaving early stores tour:done=skipped (${tourFlag})`);
+
+  // A fresh page WITHOUT the flag (and with persistence on) must get the
+  // first-run prompt; starting from it enters the tour.
+  const page2 = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page2.addInitScript(() => localStorage.removeItem('tour:done'));
+  await page2.goto(APP_URL.replace('?nopersist=1', ''), { waitUntil: 'domcontentloaded' });
+  await page2.waitForSelector('.tour-prompt', { timeout: 10000 });
+  assert(true, 'first visit in a browser offers the tutorial');
+  await page2.click('.tour-prompt__start');
+  await page2.waitForSelector('.tour');
+  assert((await page2.locator('.tour').count()) === 1, 'accepting the prompt starts the tour');
+  await page2.close();
+
   await browser.close();
 
   log('\n--- console.errors ---');

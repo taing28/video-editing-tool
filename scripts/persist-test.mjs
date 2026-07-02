@@ -38,6 +38,9 @@ try {
   page.on('pageerror', (e) => consoleErrors.push('PAGEERROR ' + e.message));
 
   // Clean slate.
+  // This test uses the PERSISTING app URL — pre-mark the tour as done so the
+  // first-run tutorial prompt doesn't cover the UI.
+  await page.addInitScript(() => localStorage.setItem('tour:done', 'skipped'));
   await page.goto(URL, { waitUntil: 'domcontentloaded' });
   await page.evaluate(
     () =>

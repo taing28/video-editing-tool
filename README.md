@@ -86,6 +86,10 @@ npm run build      # typecheck + production build
 - **Duplicate** a clip or overlay (⧉ button / ⌘/Ctrl+D) — repeat a configured photo or title.
 - **Collapsible, resizable side panels** — drag the inner edge to resize, click the ‹/› tab to
   slide a panel away; widths persist. Inspector fields wrap instead of overflowing; no scrollbars.
+- **Guided tour for new users** — on your first visit the editor offers a spotlight
+  walkthrough (import → arrange → overlays → voiceover → captions → export), with Next/Back on
+  every step and the highlighted control explained in place. Replay it anytime with the 🎓 **Tour**
+  button in the header; completion is remembered per browser (localStorage).
 - **Help & tooltips** — hover any control for ~1s to get a plain-language tooltip, or click the
   **?** button for a searchable guide (what each feature is + how to use it). Inspector sections
   have inline **?** links that jump to that feature's guide entry.
