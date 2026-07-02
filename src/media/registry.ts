@@ -65,6 +65,32 @@ function loadMediaElement<T extends HTMLVideoElement | HTMLAudioElement>(el: T, 
 }
 
 /**
+ * Chrome quirk: blobs produced by MediaRecorder (e.g. a voiceover recording)
+ * report `duration: Infinity` until the element is seeked far ahead. Force the
+ * real duration out; falls back to 0 (caller applies a default).
+ */
+function ensureFiniteDuration(el: HTMLVideoElement | HTMLAudioElement): Promise<number> {
+  if (Number.isFinite(el.duration) && el.duration > 0) return Promise.resolve(el.duration);
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      el.removeEventListener('durationchange', done);
+      el.currentTime = 0;
+      resolve(Number.isFinite(el.duration) ? el.duration : 0);
+    };
+    el.addEventListener('durationchange', done);
+    try {
+      el.currentTime = Number.MAX_SAFE_INTEGER;
+    } catch {
+      done();
+    }
+    setTimeout(done, 1500);
+  });
+}
+
+/**
  * Import one File: create an object URL, decode just enough to learn its size /
  * duration, register the runtime drawable, and return the serializable asset.
  * `fps` is needed to convert the source's natural seconds into frames.
@@ -100,7 +126,10 @@ export async function importFile(file: File, fps: number): Promise<MediaAsset> {
     const video = await loadMediaElement(document.createElement('video'), url);
     asset.width = video.videoWidth;
     asset.height = video.videoHeight;
-    asset.durationInFrames = secondsToFrames(video.duration || DEFAULT_IMAGE_SECONDS, fps);
+    asset.durationInFrames = secondsToFrames(
+      (await ensureFiniteDuration(video)) || DEFAULT_IMAGE_SECONDS,
+      fps,
+    );
     entries.set(id, {
       kind,
       objectUrl: url,
@@ -112,7 +141,10 @@ export async function importFile(file: File, fps: number): Promise<MediaAsset> {
     });
   } else {
     const audio = await loadMediaElement(document.createElement('audio'), url);
-    asset.durationInFrames = secondsToFrames(audio.duration || DEFAULT_IMAGE_SECONDS, fps);
+    asset.durationInFrames = secondsToFrames(
+      (await ensureFiniteDuration(audio)) || DEFAULT_IMAGE_SECONDS,
+      fps,
+    );
     entries.set(id, { kind, objectUrl: url, file, element: audio });
   }
 

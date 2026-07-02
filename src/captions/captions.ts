@@ -29,20 +29,32 @@ export function segmentsToCaptions(
 ): CaptionEffect[] {
   return segments
     .filter((s) => s.text.trim().length > 0)
-    .map((s) => ({
-      id: newEffectId(),
-      type: 'caption' as const,
-      timing: {
-        start: secondsToFrames(Math.max(0, s.start), fps),
-        duration: Math.max(1, secondsToFrames(Math.max(0.3, s.end - s.start), fps)),
-      },
-      text: s.text.trim(),
-      fontSize: style.fontSize,
-      fontFamily: style.fontFamily,
-      color: style.color,
-      // Auto-captions default to karaoke — each word lights up as it's spoken.
-      karaoke: true,
-    }));
+    .map((s) => {
+      const startSec = Math.max(0, s.start);
+      const start = secondsToFrames(startSec, fps);
+      const duration = Math.max(1, secondsToFrames(Math.max(0.3, s.end - s.start), fps));
+      // Speech-synced word timings (frame OFFSETS from the caption's start,
+      // clamped into the caption window, each at least 1 frame long).
+      const words = s.words?.length
+        ? s.words.map((w) => {
+            const ws = Math.max(0, secondsToFrames(w.start - startSec, fps));
+            const we = Math.max(ws + 1, secondsToFrames(w.end - startSec, fps));
+            return { text: w.text, start: Math.min(ws, duration - 1), end: Math.min(we, duration) };
+          })
+        : undefined;
+      return {
+        id: newEffectId(),
+        type: 'caption' as const,
+        timing: { start, duration },
+        text: s.text.trim(),
+        fontSize: style.fontSize,
+        fontFamily: style.fontFamily,
+        color: style.color,
+        // Auto-captions default to karaoke — each word lights up as it's spoken.
+        karaoke: true,
+        ...(words ? { words } : {}),
+      };
+    });
 }
 
 /** Mix all audio clips into one mono 16 kHz buffer, or null if there's no audio. */

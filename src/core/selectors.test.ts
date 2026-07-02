@@ -48,6 +48,26 @@ describe('activeCaptionWordIndex', () => {
   });
 });
 
+describe('speech-synced word timings (karaoke follow-up)', () => {
+  const synced: CaptionEffect = {
+    ...cap('hi there', 100, 60),
+    words: [
+      { text: 'hi', start: 0, end: 12 },
+      { text: 'there', start: 36, end: 60 }, // pause between the words
+    ],
+  };
+
+  it('captionWords prefers stored timings over the even split', () => {
+    expect(captionWords(synced)).toEqual(synced.words);
+  });
+
+  it('activeCaptionWordIndex honors uneven timings and pause gaps', () => {
+    expect(activeCaptionWordIndex(synced, 105)).toBe(0); // inside "hi"
+    expect(activeCaptionWordIndex(synced, 120)).toBe(-1); // the pause
+    expect(activeCaptionWordIndex(synced, 140)).toBe(1); // inside "there"
+  });
+});
+
 function withTwoOverlays(): { p: Project; a: string; b: string } {
   let p = createEmptyProject({ fps: 30 });
   const a = newEffectId();

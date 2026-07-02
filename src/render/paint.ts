@@ -8,7 +8,7 @@
  */
 import type { Scene } from './scene';
 import { getFilteredCanvas } from './colorFilter';
-import { captionFont, layoutCaption, wrapCaptionLines } from './captionLayout';
+import { captionFont, layoutCaption, measureTextBlock, wrapCaptionLines } from './captionLayout';
 
 export function paintScene(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -50,14 +50,39 @@ export function paintScene(
     } else if (layer.kind === 'text') {
       // Free-positioned, top-left anchored at (x, y) — mirrors the preview.
       ctx.globalAlpha = layer.opacity;
-      ctx.fillStyle = layer.color;
       ctx.font = `${layer.fontWeight} ${layer.fontSize}px ${layer.fontFamily}`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       const lineHeight = layer.fontSize * 1.2;
+      // Readability kit: padded box behind the text, sized by the SHARED
+      // measurer so the preview's box matches pixel-for-pixel.
+      if (layer.background) {
+        const pad = layer.fontSize * 0.3;
+        const box = measureTextBlock(layer.text, layer.fontSize, layer.fontWeight, layer.fontFamily);
+        ctx.globalAlpha = layer.opacity * (layer.backgroundOpacity ?? 0.55);
+        ctx.fillStyle = layer.background;
+        ctx.fillRect(layer.x - pad, layer.y - pad, box.width + pad * 2, box.height + pad * 2);
+        ctx.globalAlpha = layer.opacity;
+      }
+      if (layer.shadow) {
+        ctx.shadowColor = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = layer.fontSize * 0.15;
+        ctx.shadowOffsetY = layer.fontSize * 0.06;
+      }
+      ctx.fillStyle = layer.color;
+      if (layer.outline) {
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.lineWidth = Math.max(2, layer.fontSize * 0.08);
+      }
       layer.text.split('\n').forEach((line, i) => {
-        ctx.fillText(line, layer.x, layer.y + i * lineHeight);
+        const y = layer.y + i * lineHeight;
+        if (layer.outline) ctx.strokeText(line, layer.x, y);
+        ctx.fillText(line, layer.x, y);
       });
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
       ctx.globalAlpha = 1;
     } else if (layer.kind === 'shape') {
       ctx.globalAlpha = layer.opacity;

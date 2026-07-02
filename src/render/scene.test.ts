@@ -215,3 +215,54 @@ describe('buildScene karaoke captions', () => {
     expect(layer?.words).toBeUndefined();
   });
 });
+
+describe('buildScene text readability kit', () => {
+  it('passes background/outline/shadow through to the text layer', () => {
+    let p = createEmptyProject({ fps: 30 });
+    p = insertEffect(p, {
+      id: newEffectId(),
+      type: 'text',
+      timing: { start: 0, duration: 30 },
+      text: 'Hi',
+      fontSize: 40,
+      fontWeight: 700,
+      fontFamily: 'sans',
+      color: '#fff',
+      x: 10,
+      y: 10,
+      align: 'left',
+      background: '#000000',
+      backgroundOpacity: 0.7,
+      outline: true,
+      shadow: true,
+    });
+    const scene = buildScene(p, 0, resolve);
+    const text = scene.layers.find((l) => l.kind === 'text');
+    expect(text).toMatchObject({
+      background: '#000000',
+      backgroundOpacity: 0.7,
+      outline: true,
+      shadow: true,
+    });
+  });
+
+  it('omits readability fields when unset (older docs)', () => {
+    let p = createEmptyProject({ fps: 30 });
+    p = insertEffect(p, {
+      id: newEffectId(),
+      type: 'text',
+      timing: { start: 0, duration: 30 },
+      text: 'Hi',
+      fontSize: 40,
+      fontWeight: 700,
+      fontFamily: 'sans',
+      color: '#fff',
+      x: 10,
+      y: 10,
+      align: 'left',
+    });
+    const scene = buildScene(p, 0, resolve);
+    const text = scene.layers.find((l) => l.kind === 'text');
+    expect(text && 'background' in text ? text.background : undefined).toBeUndefined();
+  });
+});

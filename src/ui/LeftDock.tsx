@@ -11,11 +11,13 @@ import { useEditor, useSelectedClip } from '../store/editorStore';
 import { MediaLibrary } from './MediaLibrary';
 import { HelpLink } from './HelpDialog';
 import { ScrollArea } from './ScrollArea';
+import { startRecording, type RecorderHandle } from '../media/recorder';
 
-type PanelId = 'media' | 'text' | 'captions' | 'elements' | 'adjust' | 'settings';
+type PanelId = 'media' | 'record' | 'text' | 'captions' | 'elements' | 'adjust' | 'settings';
 
 const RAIL: { id: PanelId; icon: string; label: string; tip: string }[] = [
   { id: 'media', icon: '🎞', label: 'Media', tip: 'Your imported images, video and audio.' },
+  { id: 'record', icon: '🎙', label: 'Record', tip: 'Record a voiceover with your microphone.' },
   { id: 'text', icon: 'T', label: 'Text', tip: 'Add titles and text overlays.' },
   { id: 'captions', icon: 'CC', label: 'Captions', tip: 'Add subtitles, or auto-transcribe audio.' },
   { id: 'elements', icon: '⬡', label: 'Elements', tip: 'Shapes, lower-thirds and emoji stickers.' },
@@ -113,6 +115,7 @@ export function LeftDock() {
           <div className="dock__panel-body">
             <ScrollArea className="dock__panel-scroll" orientation="vertical">
               {active === 'media' && <MediaLibrary />}
+              {active === 'record' && <RecordPanel />}
               {active === 'text' && <TextPanel />}
               {active === 'captions' && <CaptionsPanel />}
               {active === 'elements' && <ElementsPanel />}
@@ -135,6 +138,104 @@ export function LeftDock() {
 
 function PanelSection({ children }: { children: ReactNode }) {
   return <div className="panel-pad">{children}</div>;
+}
+
+function RecordPanel() {
+  const addRecordedVoiceover = useEditor((s) => s.addRecordedVoiceover);
+  const pause = useEditor((s) => s.pause);
+  const [rec, setRec] = useState<RecorderHandle | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [level, setLevel] = useState(0);
+  const recRef = useRef<RecorderHandle | null>(null);
+  recRef.current = rec;
+
+  // Live meter + elapsed readout while recording.
+  useEffect(() => {
+    if (!rec) return;
+    let raf = 0;
+    const loop = () => {
+      setLevel(rec.level());
+      setElapsed((performance.now() - rec.startedAt) / 1000);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [rec]);
+
+  // Release the mic if the panel unmounts mid-recording.
+  useEffect(() => () => recRef.current?.cancel(), []);
+
+  const start = async () => {
+    setError(null);
+    pause(); // playback audio would bleed into the mic
+    try {
+      setRec(await startRecording());
+      setElapsed(0);
+    } catch {
+      setError('Microphone unavailable — allow mic access in the browser and try again.');
+    }
+  };
+
+  const stop = async () => {
+    const r = rec;
+    if (!r) return;
+    setRec(null);
+    setSaving(true);
+    try {
+      const file = await r.stop();
+      await addRecordedVoiceover(file);
+    } catch (err) {
+      console.warn('Voiceover import failed:', err);
+      setError('Could not save the recording.');
+    }
+    setSaving(false);
+  };
+
+  const cancel = () => {
+    rec?.cancel();
+    setRec(null);
+  };
+
+  return (
+    <PanelSection>
+      {!rec ? (
+        <button
+          className="panel-add rec__start"
+          onClick={() => void start()}
+          disabled={saving}
+          data-tip="Record narration from your microphone. It lands on an audio track at the playhead."
+        >
+          <span className="panel-add__big rec__dot-idle">●</span>
+          {saving ? 'Saving…' : 'Record voiceover'}
+        </button>
+      ) : (
+        <div className="rec">
+          <div className="rec__status">
+            <span className="rec__dot" /> Recording · {elapsed.toFixed(1)}s
+          </div>
+          <div className="rec__meter">
+            <div className="rec__meter-fill" style={{ width: `${Math.round(level * 100)}%` }} />
+          </div>
+          <div className="field-row">
+            <button className="btn btn--primary rec__stop" onClick={() => void stop()}>
+              ■ Stop &amp; add
+            </button>
+            <button className="btn" onClick={cancel}>
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
+      {error && <p className="panel-hint rec__error">{error}</p>}
+      <p className="panel-hint">
+        Move the playhead to where the narration should start, then record. The clip lands on an
+        audio track (music with “Duck under voice” dips under it automatically).{' '}
+        <HelpLink topic="Record voiceover" />
+      </p>
+    </PanelSection>
+  );
 }
 
 function TextPanel() {

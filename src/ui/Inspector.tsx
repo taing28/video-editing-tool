@@ -126,6 +126,63 @@ function TextEffectEditor() {
           onChange={(e) => update(effect.id, { color: e.target.value })}
         />
       </label>
+      <div className="inspector__sub">
+        <div className="inspector__subhead">
+          <span>Readability</span>
+        </div>
+        <label
+          className="field-check"
+          data-tip="A padded colored box behind the text so it reads on any footage."
+        >
+          <input
+            type="checkbox"
+            checked={effect.background != null}
+            onChange={(e) =>
+              update(effect.id, { background: e.target.checked ? '#000000' : undefined })
+            }
+          />
+          <span>Background box</span>
+        </label>
+        {effect.background != null && (
+          <>
+            <label className="field">
+              <span>Box color</span>
+              <input
+                type="color"
+                value={effect.background}
+                onChange={(e) => update(effect.id, { background: e.target.value })}
+              />
+            </label>
+            <label className="field">
+              <span>Box opacity ({Math.round((effect.backgroundOpacity ?? 0.55) * 100)}%)</span>
+              <input
+                type="range"
+                min={0.1}
+                max={1}
+                step={0.05}
+                value={effect.backgroundOpacity ?? 0.55}
+                onChange={(e) => update(effect.id, { backgroundOpacity: Number(e.target.value) })}
+              />
+            </label>
+          </>
+        )}
+        <label className="field-check" data-tip="A dark outline around the letters (caption-style).">
+          <input
+            type="checkbox"
+            checked={!!effect.outline}
+            onChange={(e) => update(effect.id, { outline: e.target.checked || undefined })}
+          />
+          <span>Outline</span>
+        </label>
+        <label className="field-check" data-tip="A soft drop shadow under the letters.">
+          <input
+            type="checkbox"
+            checked={!!effect.shadow}
+            onChange={(e) => update(effect.id, { shadow: e.target.checked || undefined })}
+          />
+          <span>Shadow</span>
+        </label>
+      </div>
       <p className="inspector__hint">Drag the text on the preview to move it; drag a corner to resize.</p>
       <label className="field">
         <span>Duration (s)</span>
@@ -467,7 +524,9 @@ function CaptionEditor() {
         <textarea
           rows={2}
           value={caption.text}
-          onChange={(e) => update(caption.id, { text: e.target.value })}
+          // Editing the text invalidates any speech-synced word timings —
+          // drop them so karaoke falls back to the even distribution.
+          onChange={(e) => update(caption.id, { text: e.target.value, words: undefined } as never)}
         />
       </label>
       <label className="field">

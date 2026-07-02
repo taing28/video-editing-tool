@@ -100,6 +100,20 @@ try {
     viewport: { width: 1440, height: 900 },
     acceptDownloads: true,
   });
+  // Synthesized mic for the voiceover step: Chromium's fake-device flags hang
+  // on headless macOS, so stub getUserMedia with a REAL WebAudio MediaStream
+  // (a tone) — MediaRecorder and the whole import path still run for real.
+  await page.addInitScript(() => {
+    navigator.mediaDevices.getUserMedia = async () => {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      osc.frequency.value = 440;
+      const dest = ctx.createMediaStreamDestination();
+      osc.connect(dest);
+      osc.start();
+      return dest.stream;
+    };
+  });
   page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text()));
   page.on('pageerror', (e) => pageErrors.push(e.message));
 
@@ -360,6 +374,20 @@ try {
     `text overlay fade-in ~15f stored (${fadeInFrames})`,
   );
 
+  log('STEP 8c2 — text readability kit (background box + outline)');
+  await page.click('.inspector label:has(span:text-is("Background box")) input');
+  await page.click('.inspector label:has(span:text-is("Outline")) input');
+  const readability = await page.evaluate(() => {
+    const ed = window.__editor.getState();
+    const e = ed.project.effects[ed.selectedEffectId];
+    return { background: e.background, outline: e.outline };
+  });
+  assert(readability.background === '#000000', 'background box stored on the text effect');
+  assert(readability.outline === true, 'outline stored on the text effect');
+  // Turn the box back off so later luminance-based steps see the same pixels.
+  await page.click('.inspector label:has(span:text-is("Background box")) input');
+  await page.click('.inspector label:has(span:text-is("Outline")) input');
+
   log('STEP 8d — drag the overlay timeline lane to retime its start');
   assert(
     (await page.locator('.lane--overlay .clip--overlay').count()) === 1,
@@ -489,7 +517,16 @@ try {
   log('STEP 13d — auto-captions (mocked on-device transcriber)');
   await page.evaluate(() => {
     window.__transcribeOverride = async () => [
-      { text: 'auto one', start: 0, end: 1 },
+      {
+        text: 'auto one',
+        start: 0,
+        end: 1,
+        // Speech-synced word timings (uneven, with a pause) — karaoke follow-up.
+        words: [
+          { text: 'auto', start: 0, end: 0.3 },
+          { text: 'one', start: 0.7, end: 1 },
+        ],
+      },
       { text: 'auto two', start: 1, end: 2 },
     ];
   });
@@ -514,6 +551,20 @@ try {
       Object.values(window.__editor.getState().project.effects).some((e) => e.text === 'auto one'),
     ),
     'transcribed caption text inserted',
+  );
+  const syncedWords = await page.evaluate(() => {
+    const cap = Object.values(window.__editor.getState().project.effects).find(
+      (e) => e.text === 'auto one',
+    );
+    return cap?.words ?? null;
+  });
+  assert(
+    Array.isArray(syncedWords) &&
+      syncedWords.length === 2 &&
+      syncedWords[0].start === 0 &&
+      syncedWords[0].end === 9 && // 0.3s @ 30fps
+      syncedWords[1].start === 21, // 0.7s @ 30fps
+    `speech-synced word timings stored on the caption (${JSON.stringify(syncedWords)})`,
   );
 
   log('STEP 13e — shape overlay + drag on the preview');
@@ -858,6 +909,44 @@ try {
     return { selectedIsCopy: Boolean(sel), kind: sel?.kind };
   });
   assert(dup.selectedIsCopy && dup.kind === 'audio', 'the new copy is selected');
+
+  log('STEP 22 — record a voiceover (fake mic) lands on an audio track');
+  const recBefore = await page.evaluate(() => {
+    const s = window.__editor.getState();
+    return {
+      media: Object.keys(s.project.media).length,
+      clips: Object.keys(s.project.clips).length,
+    };
+  });
+  await page.click('[data-panel="record"]');
+  await page.click('.rec__start');
+  await page.waitForSelector('.rec__stop');
+  await page.waitForTimeout(900);
+  await page.click('.rec__stop');
+  await page.waitForFunction(
+    (n) => Object.keys(window.__editor.getState().project.media).length === n + 1,
+    recBefore.media,
+    { timeout: 15000 },
+  );
+  const recAfter = await page.evaluate(() => {
+    const s = window.__editor.getState();
+    const media = Object.values(s.project.media);
+    const rec = media.find((m) => m.name.startsWith('Voiceover'));
+    const clip = Object.values(s.project.clips).find((c) => c.mediaId === rec?.id);
+    return {
+      mediaCount: media.length,
+      clipCount: Object.keys(s.project.clips).length,
+      hasRec: Boolean(rec),
+      recKind: rec?.kind,
+      recDuration: rec?.durationInFrames ?? 0,
+      clipOnAudioTrack: clip ? s.project.tracks[clip.trackId]?.kind === 'audio' : false,
+      finite: Number.isFinite(rec?.durationInFrames),
+    };
+  });
+  assert(recAfter.hasRec && recAfter.recKind === 'audio', 'recording imported as audio media');
+  assert(recAfter.finite && recAfter.recDuration >= 1, `recording has a real duration (${recAfter.recDuration}f)`);
+  assert(recAfter.clipCount === recBefore.clips + 1, 'voiceover clip added to the timeline');
+  assert(recAfter.clipOnAudioTrack, 'voiceover clip landed on an audio track');
 
   await browser.close();
 

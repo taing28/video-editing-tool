@@ -142,6 +142,9 @@ export interface CaptionWord {
  * and pure (no speech data needed) — the highlight sweeps at a constant rate.
  */
 export function captionWords(effect: CaptionEffect): CaptionWord[] {
+  // Speech-synced timings (from auto-caption) win; the even split is the
+  // fallback for hand-typed captions.
+  if (effect.words && effect.words.length > 0) return effect.words;
   const words = effect.text.split(/\s+/).filter(Boolean);
   const n = words.length;
   if (n === 0) return [];

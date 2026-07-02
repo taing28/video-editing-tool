@@ -69,6 +69,11 @@ export interface TextLayer {
   align: 'left' | 'center' | 'right';
   /** 0..1 fade envelope from the effect's fadeIn/fadeOut. */
   opacity: number;
+  /** Readability kit (see TextEffect): box fill / box opacity / outline / shadow. */
+  background?: string;
+  backgroundOpacity?: number;
+  outline?: boolean;
+  shadow?: boolean;
 }
 
 export interface CaptionLayer {
@@ -198,6 +203,10 @@ export function buildScene(
         color: effect.color,
         align: effect.align,
         opacity: fade,
+        background: effect.background,
+        backgroundOpacity: effect.backgroundOpacity,
+        outline: effect.outline,
+        shadow: effect.shadow,
       });
     } else if (effect.type === 'caption') {
       const karaoke = effect.karaoke

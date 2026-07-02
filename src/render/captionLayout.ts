@@ -38,6 +38,27 @@ function getMeasureCtx(): CanvasRenderingContext2D | null {
 }
 
 /**
+ * Measure a multi-line text block (max line width × line count) with the SAME
+ * cached context both renderers draw with — the text readability kit's
+ * background box is sized from this in the preview AND the export, so the box
+ * hugs the text identically in both.
+ */
+export function measureTextBlock(
+  text: string,
+  fontSize: number,
+  fontWeight: number,
+  fontFamily: string,
+): { width: number; height: number; lineHeight: number } {
+  const ctx = getMeasureCtx();
+  if (ctx) ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+  const measure = (t: string) => (ctx ? ctx.measureText(t).width : t.length * fontSize * 0.55);
+  const lines = text.split('\n');
+  const width = lines.reduce((m, l) => Math.max(m, measure(l)), 0);
+  const lineHeight = fontSize * 1.2;
+  return { width, height: lines.length * lineHeight, lineHeight };
+}
+
+/**
  * Greedy word-wrap plain caption lines to `maxWidth`, preserving explicit \n
  * breaks. Both renderers wrap through THIS function so a long caption breaks
  * at the same words in the preview and the export (same parity trick as

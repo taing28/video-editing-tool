@@ -36,6 +36,20 @@ export const GUIDE: GuideEntry[] = [
     how: 'Space = play/pause · ←/→ = step one frame (Shift = 1 second) · Home/End = start/end · S = split at playhead · Delete = remove selection · Esc = deselect · ⌘/Ctrl+Z = undo (Shift = redo) · ⌘/Ctrl+D = duplicate · ⌘/Ctrl+S = save project file · ⌘/Ctrl+E = export.',
   },
   {
+    name: 'Text readability',
+    category: 'Overlays',
+    tip: 'Background box, outline and shadow so text reads on any footage.',
+    what: 'Styling that keeps a text overlay legible over busy or bright video: a padded box behind it, a dark outline around the letters, or a soft shadow.',
+    how: 'Select a text overlay and open the Readability section in the Inspector: toggle Background box (with color + opacity), Outline, or Shadow. They apply in the preview and the export identically.',
+  },
+  {
+    name: 'Record voiceover',
+    category: 'Audio',
+    tip: 'Record narration from your mic straight onto the timeline.',
+    what: 'Captures your voice with the microphone and adds it as an audio clip — the fastest way to narrate a picture story.',
+    how: 'Open Record (left dock), move the playhead to where the narration should start, hit Record, speak, then Stop & add. Music clips with "Duck under voice" automatically dip under it.',
+  },
+  {
     name: 'Stickers',
     category: 'Overlays',
     tip: 'One-click emoji overlays (⭐ 🔥 😂 …).',

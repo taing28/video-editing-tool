@@ -179,6 +179,22 @@ export interface TextEffect extends BaseEffect {
   x: number;
   y: number;
   align: 'left' | 'center' | 'right';
+  // --- readability kit (all optional → older docs need no migration) ---
+  /** Fill color of a padded box behind the text (undefined = no box). */
+  background?: string;
+  /** Opacity of the background box (default 0.55). */
+  backgroundOpacity?: number;
+  /** Dark outline around the glyphs (caption-style). */
+  outline?: boolean;
+  /** Soft drop shadow under the glyphs. */
+  shadow?: boolean;
+}
+
+/** One karaoke word's timing, in frame OFFSETS from the caption's start. */
+export interface CaptionWordTiming {
+  text: string;
+  start: Frames;
+  end: Frames;
 }
 
 export interface CaptionEffect extends BaseEffect {
@@ -191,6 +207,9 @@ export interface CaptionEffect extends BaseEffect {
   karaoke?: boolean;
   /** Color of the currently-spoken word in karaoke mode (default accent). */
   highlightColor?: string;
+  /** Speech-synced word timings (from auto-caption); falls back to even
+   * distribution when absent. Dropped if the text is edited. */
+  words?: CaptionWordTiming[];
 }
 
 export interface ShapeEffect extends BaseEffect {

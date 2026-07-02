@@ -36,7 +36,7 @@ import {
 } from '../render/scene';
 import { resolveMedia, getVideoElement } from '../media/registry';
 import { getFilteredCanvas } from '../render/colorFilter';
-import { layoutCaption, wrapCaptionLines } from '../render/captionLayout';
+import { layoutCaption, measureTextBlock, wrapCaptionLines } from '../render/captionLayout';
 import { getActiveVideoClips, sourceFrameAt } from '../core/selectors';
 import type { ClipId, EffectId } from '../core/ids';
 
@@ -328,21 +328,47 @@ export function Preview() {
                 );
               }
               if (layer.kind === 'text') {
+                // Readability kit: box/outline/shadow sized by the SAME
+                // measurer as the export painter (parity by construction).
+                const pad = layer.fontSize * 0.3;
+                const box = layer.background
+                  ? measureTextBlock(layer.text, layer.fontSize, layer.fontWeight, layer.fontFamily)
+                  : null;
                 return (
-                  <KonvaText
+                  <Group
                     key={layer.effectId}
-                    text={layer.text}
-                    x={layer.x}
-                    y={layer.y}
-                    fontSize={layer.fontSize}
-                    fontFamily={layer.fontFamily}
-                    fontStyle={weightToFontStyle(layer.fontWeight)}
-                    fill={layer.color}
                     opacity={layer.opacity}
-                    lineHeight={1.2}
                     onClick={() => selectEffect(layer.effectId as EffectId)}
                     onDblClick={() => editEffectText(layer.effectId as EffectId)}
-                  />
+                  >
+                    {box && (
+                      <Rect
+                        x={layer.x - pad}
+                        y={layer.y - pad}
+                        width={box.width + pad * 2}
+                        height={box.height + pad * 2}
+                        fill={layer.background}
+                        opacity={layer.backgroundOpacity ?? 0.55}
+                      />
+                    )}
+                    <KonvaText
+                      text={layer.text}
+                      x={layer.x}
+                      y={layer.y}
+                      fontSize={layer.fontSize}
+                      fontFamily={layer.fontFamily}
+                      fontStyle={weightToFontStyle(layer.fontWeight)}
+                      fill={layer.color}
+                      lineHeight={1.2}
+                      stroke={layer.outline ? 'rgba(0,0,0,0.85)' : undefined}
+                      strokeWidth={layer.outline ? Math.max(2, layer.fontSize * 0.08) : 0}
+                      fillAfterStrokeEnabled={!!layer.outline}
+                      shadowColor="rgba(0,0,0,0.6)"
+                      shadowBlur={layer.shadow ? layer.fontSize * 0.15 : 0}
+                      shadowOffsetY={layer.shadow ? layer.fontSize * 0.06 : 0}
+                      shadowEnabled={!!layer.shadow}
+                    />
+                  </Group>
                 );
               }
               // caption — centered, bottom-anchored, outlined

@@ -1511,3 +1511,49 @@
   font-size: 12px;
   pointer-events: none;
 }
+
+/* Record voiceover panel */
+.rec {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--panel-2);
+  border: 1px solid #d64545;
+  border-radius: 10px;
+}
+.rec__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.rec__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e05252;
+  animation: rec-pulse 1.1s ease-in-out infinite;
+}
+.rec__dot-idle {
+  color: #e05252;
+}
+@keyframes rec-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.rec__meter {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.rec__meter-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #37b96b, #e6c34a 70%, #e05252);
+  transition: width 60ms linear;
+}
+.rec__error {
+  color: #ff8b8b;
+}

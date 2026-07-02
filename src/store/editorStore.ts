@@ -128,6 +128,8 @@ export interface EditorState {
 
   // media + clips
   importMedia: (files: File[]) => Promise<void>;
+  /** Import a mic recording and drop it on an audio track at the playhead. */
+  addRecordedVoiceover: (file: File) => Promise<void>;
   removeMedia: (mediaId: MediaId) => void;
   /** Append every image asset as a timed slideshow on the video track. */
   buildSlideshow: (opts: {
@@ -377,6 +379,24 @@ export const useEditor = create<EditorState>((set, get) => {
           console.error(err);
         }
       }
+    },
+
+    addRecordedVoiceover: async (file) => {
+      const fps = get().project.fps;
+      const asset = await importFile(file, fps);
+      commit((p) => addMedia(p, asset));
+      persistence.saveMedia(asset.id, file).catch((err) => {
+        console.warn('Could not persist the recording (reload will lose it):', err);
+      });
+      // Land the clip on the first audio track (create one if all were deleted).
+      let track = get()
+        .project.trackOrder.map((id) => get().project.tracks[id])
+        .find((t) => t?.kind === 'audio');
+      if (!track) {
+        get().addTrack('audio');
+        track = Object.values(get().project.tracks).find((t) => t.kind === 'audio');
+      }
+      if (track) get().addClipFromMedia(asset.id, track.id); // playhead-aware
     },
 
     removeMedia: (mediaId) => {
